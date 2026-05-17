@@ -1,0 +1,28 @@
+{
+  "name": "kvx-omnihub",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@10.26.2",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "pnpm -r --parallel --filter=./apps/* run dev",
+    "build": "pnpm -r --filter=./packages/* run build && pnpm -r --filter=./apps/* run build",
+    "build:shared": "pnpm --filter @omnihub/shared run build",
+    "lint": "pnpm -r run lint",
+    "typecheck": "pnpm -r run typecheck",
+    "clean": "pnpm -r run clean"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@nestjs/core",
+      "argon2",
+      "esbuild",
+      "sqlite3"
+    ]
+  }
+}

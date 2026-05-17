@@ -1,0 +1,12 @@
+{
+  "name": "@omnihub/tools",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "fake-esp32": "node fake-esp32.mjs"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  }
+}
