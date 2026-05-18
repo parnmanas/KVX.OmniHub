@@ -1,0 +1,9 @@
+.pio/
+.pioenvs/
+.piolibdeps/
+.vscode/
+.clangd/
+.cache/
+*.bin
+*.elf
+*.map
