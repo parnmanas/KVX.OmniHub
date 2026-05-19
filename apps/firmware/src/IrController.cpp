@@ -7,7 +7,12 @@
 namespace {
 constexpr uint16_t RX_BUFFER_SIZE = 1024;
 constexpr uint8_t RX_TIMEOUT_MS = 50;     // gap between IR bursts
-constexpr uint16_t MIN_UNKNOWN_SIZE = 12;
+// Real consumer IR signals decode to 60+ raw edges (NEC/Samsung/LG ≈ 67,
+// aircon protocols 100+). Known protocols are identified regardless of
+// this threshold — it only gates the UNKNOWN fallback. We set it high
+// enough that ambient-noise bursts (typically < 20 edges) can never be
+// mistaken for a real remote. Legitimate UNKNOWN remotes still pass.
+constexpr uint16_t MIN_UNKNOWN_SIZE = 100;
 
 IRrecv* g_recv = nullptr;
 IRsend* g_send = nullptr;
@@ -112,8 +117,22 @@ bool learn(uint32_t timeoutMs, JsonObject out) {
   bool got = false;
   while (millis() - start < timeoutMs) {
     if (g_recv->decode(&res)) {
-      got = true;
-      break;
+      // A known protocol with bits is always a good capture. For UNKNOWN,
+      // also require a reasonable number of raw edges, otherwise it's
+      // almost certainly an ambient-noise glitch — discard and keep
+      // listening within the user's timeout window.
+      const bool knownGood =
+          res.decode_type != UNKNOWN && res.bits > 0;
+      const bool rawGood =
+          res.decode_type == UNKNOWN && res.rawlen >= MIN_UNKNOWN_SIZE;
+      if (knownGood || rawGood) {
+        got = true;
+        break;
+      }
+      Serial.printf(
+          "[ir] discard noise: decode=%d bits=%d rawlen=%u\n",
+          static_cast<int>(res.decode_type), res.bits, res.rawlen);
+      g_recv->resume();  // re-arm capture, otherwise decode() never fires again
     }
     delay(20);
   }
@@ -135,8 +154,8 @@ bool learn(uint32_t timeoutMs, JsonObject out) {
   }
 
   JsonArray raw = out["raw"].to<JsonArray>();
-  // res.rawlen includes the leading gap; index 0 is meaningless. Convert
-  // ticks (50us units in IRremoteESP8266) to microseconds.
+  // res.rawlen includes the leading gap at index 0 (meaningless). Each
+  // entry is in kRawTick (2us) units in IRremoteESP8266.
   for (uint16_t i = 1; i < res.rawlen; ++i) {
     raw.add(static_cast<uint32_t>(res.rawbuf[i]) * kRawTick);
   }
