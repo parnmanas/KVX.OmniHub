@@ -87,4 +87,20 @@ export class EquipmentsController {
   removeFunction(@Param("id", ParseUUIDPipe) id: string): Promise<void> {
     return this.service.removeFunction(id);
   }
+
+  // ---------- IR record / play ----------
+
+  @Post("functions/:id/record")
+  recordFunction(
+    @Param("id", ParseUUIDPipe) id: string,
+    @Body() body: { timeoutMs?: number },
+  ): Promise<EquipmentFunction> {
+    return this.service.recordFunction(id, body?.timeoutMs);
+  }
+
+  @Post("functions/:id/play")
+  @HttpCode(204)
+  playFunction(@Param("id", ParseUUIDPipe) id: string): Promise<void> {
+    return this.service.playFunction(id);
+  }
 }

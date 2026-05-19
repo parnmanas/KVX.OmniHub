@@ -27,4 +27,20 @@ export default defineConfig({
       },
     },
   },
+  preview: {
+    host: true,
+    port: 4173,
+    strictPort: true,
+    proxy: {
+      "/api": {
+        target: API_TARGET,
+        changeOrigin: true,
+      },
+      "/ws": {
+        target: API_TARGET.replace(/^http/, "ws"),
+        ws: true,
+        changeOrigin: true,
+      },
+    },
+  },
 });
