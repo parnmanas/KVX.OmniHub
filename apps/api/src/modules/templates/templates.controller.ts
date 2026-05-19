@@ -20,6 +20,7 @@ import { CreateTemplateDto } from "./dto/create-template.dto";
 import {
   CreateTemplateFunctionDto,
   InstantiateTemplateDto,
+  RecordTemplateFunctionDto,
   UpdateTemplateFunctionDto,
 } from "./dto/template-function.dto";
 import { UpdateTemplateDto } from "./dto/update-template.dto";
@@ -90,6 +91,14 @@ export class TemplatesController {
   @HttpCode(204)
   removeFunction(@Param("id", ParseUUIDPipe) id: string): Promise<void> {
     return this.service.removeFunction(id);
+  }
+
+  @Post("template-functions/:id/record")
+  recordFunction(
+    @Param("id", ParseUUIDPipe) id: string,
+    @Body() dto: RecordTemplateFunctionDto,
+  ): Promise<TemplateFunction> {
+    return this.service.recordFunction(id, dto.omnihubId, dto.timeoutMs);
   }
 
   // ---------- instantiate (Template → Equipment) ----------

@@ -74,3 +74,13 @@ export class InstantiateTemplateDto {
   @IsString()
   omnihubId?: string;
 }
+
+export class RecordTemplateFunctionDto {
+  @IsString()
+  omnihubId!: string;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1000)
+  timeoutMs?: number;
+}

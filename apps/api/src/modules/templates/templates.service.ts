@@ -3,6 +3,7 @@ import {
   ConflictException,
   Injectable,
   NotFoundException,
+  ServiceUnavailableException,
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { DataSource, Repository } from "typeorm";
@@ -14,6 +15,7 @@ import {
   Store,
   TemplateFunction,
 } from "../../entities";
+import { OmnihubGateway } from "../../gateways/omnihub.gateway";
 import type { CreateTemplateDto } from "./dto/create-template.dto";
 import type {
   CreateTemplateFunctionDto,
@@ -38,6 +40,7 @@ export class TemplatesService {
     @InjectRepository(OmniHubDevice)
     private readonly devices: Repository<OmniHubDevice>,
     private readonly dataSource: DataSource,
+    private readonly gateway: OmnihubGateway,
   ) {}
 
   // ---------- templates ----------
@@ -150,6 +153,43 @@ export class TemplatesService {
     if (!result.affected) {
       throw new NotFoundException(`template function not found: ${id}`);
     }
+  }
+
+  // ---------- IR record (per-template, using a chosen OmniHub) ----------
+
+  async recordFunction(
+    id: string,
+    omnihubId: string,
+    timeoutMs?: number,
+  ): Promise<TemplateFunction> {
+    const fn = await this.templateFunctions.findOne({ where: { id } });
+    if (!fn) {
+      throw new NotFoundException(`template function not found: ${id}`);
+    }
+    if (fn.controlType !== "IR") {
+      throw new BadRequestException("only IR functions can be recorded");
+    }
+    const device = await this.devices.findOne({ where: { id: omnihubId } });
+    if (!device) {
+      throw new BadRequestException(`omnihub not found: ${omnihubId}`);
+    }
+
+    let learned;
+    try {
+      learned = await this.gateway.requestIrLearn(omnihubId, timeoutMs);
+    } catch (err) {
+      const msg = (err as Error).message;
+      if (msg === "omnihub offline") {
+        throw new ServiceUnavailableException(msg);
+      }
+      if (msg === "learn timeout") {
+        throw new ServiceUnavailableException(msg);
+      }
+      throw new ServiceUnavailableException(msg);
+    }
+
+    fn.payload = { controlType: "IR", data: learned };
+    return this.templateFunctions.save(fn);
   }
 
   // ---------- instantiate ----------
