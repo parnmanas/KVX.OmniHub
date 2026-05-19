@@ -32,6 +32,8 @@ Thumbs.db
 # Claude Code (local-only settings; team-shared settings.json may be committed)
 .claude/settings.local.json
 .claude/worktrees/
+.ccwa/
+.ccwa-runtime/
 
 # Test
 coverage/
