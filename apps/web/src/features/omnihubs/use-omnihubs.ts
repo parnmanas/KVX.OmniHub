@@ -24,6 +24,17 @@ export function useOmnihubs() {
   return useQuery({ queryKey: omnihubsKeys.all, queryFn: listOmnihubs });
 }
 
+export function useOmnihub(id: string | undefined) {
+  return useQuery({
+    queryKey: id ? omnihubsKeys.detail(id) : ["omnihubs", "none"],
+    queryFn: async () => {
+      const { data } = await api.get<Omnihub>(`/omnihubs/${id}`);
+      return data;
+    },
+    enabled: Boolean(id),
+  });
+}
+
 export function useCreateOmnihub() {
   const qc = useQueryClient();
   return useMutation({

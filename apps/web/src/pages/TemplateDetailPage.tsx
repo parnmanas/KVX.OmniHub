@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { Link, useParams } from "react-router-dom";
 import { ControlType, type FunctionPayload } from "@omnihub/shared";
 import { Button } from "@/components/ui/button";
@@ -10,12 +10,10 @@ import { Select } from "@/components/ui/select";
 import {
   useCreateTemplateFunction,
   useDeleteTemplateFunction,
-  useRecordTemplateFunction,
   useTemplate,
   useUpdateTemplate,
   useUpdateTemplateFunction,
 } from "@/features/templates/use-templates";
-import { useOmnihubs } from "@/features/omnihubs/use-omnihubs";
 import type { TemplateFunction } from "@/features/templates/types";
 
 const TYPE_LABELS: Record<string, string> = {
@@ -27,8 +25,6 @@ const TYPE_LABELS: Record<string, string> = {
   PC: "컴퓨터",
   OTHER: "기타",
 };
-
-const LEARN_TIMEOUT_MS = 10_000;
 
 const EMPTY_PAYLOADS: Record<string, FunctionPayload> = {
   IR: {
@@ -50,10 +46,7 @@ const EMPTY_PAYLOADS: Record<string, FunctionPayload> = {
 };
 
 const PAYLOAD_EXAMPLES: Record<string, FunctionPayload> = {
-  IR: {
-    controlType: "IR",
-    data: { protocol: "UNKNOWN", decoded: null, raw: [] },
-  },
+  IR: EMPTY_PAYLOADS.IR,
   WOL: EMPTY_PAYLOADS.WOL,
   HTTP_API: EMPTY_PAYLOADS.HTTP_API,
   RELAY: EMPTY_PAYLOADS.RELAY,
@@ -69,17 +62,10 @@ function isIrRecorded(fn: TemplateFunction): boolean {
 export default function TemplateDetailPage() {
   const { id } = useParams<{ id: string }>();
   const template = useTemplate(id);
-  const omnihubs = useOmnihubs();
   const updateTemplate = useUpdateTemplate();
   const deleteFunction = useDeleteTemplateFunction(id ?? "");
   const [addOpen, setAddOpen] = useState(false);
   const [editingName, setEditingName] = useState<string | null>(null);
-  const [selectedHubId, setSelectedHubId] = useState<string>("");
-
-  const onlineHubs = useMemo(
-    () => (omnihubs.data ?? []).filter((h) => h.status === "online"),
-    [omnihubs.data],
-  );
 
   if (!id) return null;
   if (template.isLoading) {
@@ -93,9 +79,8 @@ export default function TemplateDetailPage() {
 
   const tpl = template.data;
   const fns = tpl.functions ?? [];
-  const activeHub =
-    onlineHubs.find((h) => h.id === selectedHubId) ?? onlineHubs[0];
-  const effectiveHubId = activeHub?.id ?? "";
+  const irFns = fns.filter((f) => f.controlType === "IR");
+  const recordedCount = irFns.filter(isIrRecorded).length;
 
   return (
     <div className="space-y-6">
@@ -154,40 +139,25 @@ export default function TemplateDetailPage() {
         </div>
         <p className="text-sm text-muted-foreground">
           {TYPE_LABELS[tpl.type] ?? tpl.type} · {tpl.manufacturer} {tpl.model}
+          {irFns.length > 0 && (
+            <span className="ml-2 text-xs">
+              ({recordedCount}/{irFns.length} IR 녹음됨)
+            </span>
+          )}
         </p>
       </div>
 
-      <Card className="p-4">
-        <div className="flex flex-wrap items-end gap-3">
-          <div className="flex-1 min-w-[240px] space-y-2">
-            <Label>녹음에 사용할 OmniHub</Label>
-            <Select
-              value={effectiveHubId}
-              onChange={(e) => setSelectedHubId(e.target.value)}
-              disabled={onlineHubs.length === 0}
-            >
-              {onlineHubs.length === 0 ? (
-                <option value="">온라인 상태의 OmniHub 가 없어요</option>
-              ) : (
-                onlineHubs.map((h) => (
-                  <option key={h.id} value={h.id}>
-                    {h.name ?? h.deviceId}
-                    {h.store ? ` · ${h.store.name}` : ""}
-                  </option>
-                ))
-              )}
-            </Select>
-            <p className="text-xs text-muted-foreground">
-              이 템플릿의 IR 기능들은 선택한 OmniHub 의 IR 수신부로 녹음됩니다.
-              녹음 후 매장에 instantiate 하면 payload 가 그대로 복사돼요.
-            </p>
-          </div>
-          {omnihubs.data && omnihubs.data.length > 0 && onlineHubs.length === 0 && (
-            <p className="text-xs text-amber-700 dark:text-amber-300">
-              등록된 OmniHub 가 전부 오프라인입니다.
-            </p>
-          )}
-        </div>
+      <Card className="border-dashed border-border bg-muted/30 p-4 text-sm">
+        <p className="font-medium">IR 신호 녹음은 OmniHub 페이지에서</p>
+        <p className="mt-1 text-muted-foreground">
+          이 페이지는 템플릿 구조(기능 추가·이름·순서·삭제)를 편집하는 곳이에요.
+          실제 리모컨 신호 학습은{" "}
+          <Link to="/omnihubs" className="text-primary hover:underline">
+            OmniHub 목록
+          </Link>{" "}
+          에서 사용할 hub 옆 <span className="font-mono">● 녹음</span> 버튼으로
+          진행하세요.
+        </p>
       </Card>
 
       <section>
@@ -218,7 +188,6 @@ export default function TemplateDetailPage() {
                     key={fn.id}
                     fn={fn}
                     templateId={tpl.id}
-                    omnihubId={effectiveHubId}
                     onDelete={() => {
                       if (confirm(`"${fn.name}" 기능을 삭제할까요?`)) {
                         deleteFunction.mutate(fn.id);
@@ -244,41 +213,17 @@ export default function TemplateDetailPage() {
 function FunctionRow({
   fn,
   templateId,
-  omnihubId,
   onDelete,
 }: {
   fn: TemplateFunction;
   templateId: string;
-  omnihubId: string;
   onDelete: () => void;
 }) {
   const [showJson, setShowJson] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
-  const recordMutation = useRecordTemplateFunction(templateId);
-  const [recordOpen, setRecordOpen] = useState(false);
-  const [actionError, setActionError] = useState<string | null>(null);
 
   const isIr = fn.controlType === "IR";
   const recorded = isIrRecorded(fn);
-  const canRecord = Boolean(omnihubId);
-  const disabledReason = !canRecord ? "온라인 OmniHub 가 필요해요" : "";
-
-  async function handleRecord() {
-    if (!omnihubId) return;
-    setActionError(null);
-    setRecordOpen(true);
-    try {
-      await recordMutation.mutateAsync({
-        id: fn.id,
-        omnihubId,
-        timeoutMs: LEARN_TIMEOUT_MS,
-      });
-    } catch (err) {
-      setActionError(extractError(err));
-    } finally {
-      setRecordOpen(false);
-    }
-  }
 
   return (
     <>
@@ -303,29 +248,19 @@ function FunctionRow({
             ) : (
               <span className="text-xs text-muted-foreground">미녹음</span>
             )
-          ) : (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowJson((v) => !v)}
-            >
-              {showJson ? "접기" : "Payload 보기"}
-            </Button>
-          )}
+          ) : null}
         </td>
         <td className="px-4 py-3 text-right">
           <div className="flex justify-end gap-2">
-            {isIr && (
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={!canRecord || recordMutation.isPending}
-                title={disabledReason}
-                onClick={handleRecord}
-              >
-                {recorded ? "재녹음" : "● 녹음"}
-              </Button>
-            )}
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => setShowJson((v) => !v)}
+              disabled={isIr && !recorded}
+              title={isIr && !recorded ? "아직 녹음되지 않은 IR 입니다" : ""}
+            >
+              {showJson ? "접기" : "보기"}
+            </Button>
             <Button
               size="sm"
               variant="outline"
@@ -339,35 +274,13 @@ function FunctionRow({
           </div>
         </td>
       </tr>
-      {actionError && (
-        <tr className="border-b border-border bg-destructive/10">
-          <td colSpan={5} className="px-4 py-2 text-xs text-destructive">
-            오류: {actionError}
-            <button
-              type="button"
-              className="ml-2 underline"
-              onClick={() => setActionError(null)}
-            >
-              닫기
-            </button>
-          </td>
-        </tr>
-      )}
-      {showJson && !isIr && (
+      {showJson && (
         <tr className="bg-muted/30">
           <td colSpan={5} className="px-4 py-3">
-            <pre className="overflow-x-auto rounded bg-background p-3 text-xs">
-              {JSON.stringify(fn.payload, null, 2)}
-            </pre>
+            <PayloadView payload={fn.payload} />
           </td>
         </tr>
       )}
-
-      <RecordingModal
-        open={recordOpen}
-        functionName={fn.name}
-        timeoutMs={LEARN_TIMEOUT_MS}
-      />
       <EditFunctionModal
         templateId={templateId}
         fn={fn}
@@ -375,36 +288,6 @@ function FunctionRow({
         onClose={() => setEditOpen(false)}
       />
     </>
-  );
-}
-
-function RecordingModal({
-  open,
-  functionName,
-  timeoutMs,
-}: {
-  open: boolean;
-  functionName: string;
-  timeoutMs: number;
-}) {
-  return (
-    <Modal
-      open={open}
-      onClose={() => {
-        /* recording cannot be cancelled mid-flight */
-      }}
-      title="리모컨 신호 녹음 중"
-      description={`"${functionName}" 기능에 학습할 버튼을 OmniHub IR 수신부를 향해 한 번 누르세요.`}
-    >
-      <div className="space-y-3 text-sm">
-        <div className="flex items-center gap-3">
-          <span className="inline-block size-3 animate-pulse rounded-full bg-red-500" />
-          <span className="text-muted-foreground">
-            최대 {Math.round(timeoutMs / 1000)} 초 대기합니다…
-          </span>
-        </div>
-      </div>
-    </Modal>
   );
 }
 
@@ -436,7 +319,7 @@ function AddFunctionModal({
     setError(null);
     let payload: FunctionPayload;
     if (controlType === "IR") {
-      // IR 은 폼에서 JSON 직접 입력 대신 빈 페이로드로 만들고, 행에서 녹음.
+      // IR 페이로드는 비워서 만들고, 녹음은 OmniHub 페이지에서.
       payload = EMPTY_PAYLOADS.IR;
     } else {
       try {
@@ -473,7 +356,7 @@ function AddFunctionModal({
       open={open}
       onClose={onClose}
       title="기능 추가"
-      description="IR 기능은 추가 후 행의 '● 녹음' 으로 신호를 캡처하세요."
+      description="IR 기능은 추가 후 OmniHub 페이지에서 신호를 녹음하세요."
       className="max-w-2xl"
     >
       <form onSubmit={handleSubmit} className="space-y-4">
@@ -511,7 +394,7 @@ function AddFunctionModal({
           </Select>
           {controlType === "IR" && (
             <p className="text-xs text-muted-foreground">
-              생성 후 행의 '● 녹음' 버튼을 눌러 리모컨 신호를 캡처하세요.
+              생성 후 OmniHub 페이지의 ● 녹음 버튼으로 리모컨 신호를 학습하세요.
             </p>
           )}
         </div>
@@ -566,7 +449,6 @@ function EditFunctionModal({
 
   const isIr = fn.controlType === "IR";
 
-  // Reset local state whenever the modal opens for a different/refreshed fn.
   useEffect(() => {
     if (open) {
       setName(fn.name);
@@ -635,7 +517,7 @@ function EditFunctionModal({
       title="기능 수정"
       description={
         isIr
-          ? "IR 신호는 행에서 '● 녹음' / '재녹음' 으로만 갱신할 수 있어요."
+          ? "IR 신호는 OmniHub 페이지의 ● 녹음 으로만 갱신할 수 있어요."
           : "Payload 는 JSON 으로 직접 편집합니다."
       }
       className="max-w-2xl"
@@ -701,6 +583,52 @@ function EditFunctionModal({
         </div>
       </form>
     </Modal>
+  );
+}
+
+function PayloadView({ payload }: { payload: FunctionPayload }) {
+  if (payload.controlType === "IR") {
+    const ir = payload.data;
+    const rawLen = Array.isArray(ir.raw) ? ir.raw.length : 0;
+    return (
+      <div className="space-y-2">
+        <dl className="grid grid-cols-[120px_1fr] gap-x-3 gap-y-1 text-xs">
+          <dt className="text-muted-foreground">Protocol</dt>
+          <dd className="font-mono">{ir.protocol}</dd>
+          {ir.decoded ? (
+            <>
+              <dt className="text-muted-foreground">Decoded</dt>
+              <dd className="font-mono">
+                {ir.decoded.value}
+                <span className="ml-2 text-muted-foreground">
+                  ({ir.decoded.bits} bits)
+                </span>
+              </dd>
+            </>
+          ) : (
+            <>
+              <dt className="text-muted-foreground">Decoded</dt>
+              <dd className="text-muted-foreground">— (raw timing only)</dd>
+            </>
+          )}
+          <dt className="text-muted-foreground">Raw samples</dt>
+          <dd className="font-mono">{rawLen}</dd>
+        </dl>
+        <details className="text-xs">
+          <summary className="cursor-pointer text-muted-foreground hover:text-foreground">
+            JSON 전체 보기
+          </summary>
+          <pre className="mt-2 overflow-x-auto rounded bg-background p-3 text-xs">
+            {JSON.stringify(payload, null, 2)}
+          </pre>
+        </details>
+      </div>
+    );
+  }
+  return (
+    <pre className="overflow-x-auto rounded bg-background p-3 text-xs">
+      {JSON.stringify(payload, null, 2)}
+    </pre>
   );
 }
 

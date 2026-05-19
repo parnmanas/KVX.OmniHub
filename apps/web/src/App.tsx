@@ -3,6 +3,7 @@ import { AppLayout } from "@/components/AppLayout";
 import { RequireAuth } from "@/components/RequireAuth";
 import DashboardPage from "@/pages/DashboardPage";
 import EquipmentDetailPage from "@/pages/EquipmentDetailPage";
+import HubRecordPage from "@/pages/HubRecordPage";
 import LoginPage from "@/pages/LoginPage";
 import OmnihubsPage from "@/pages/OmnihubsPage";
 import StoreDetailPage from "@/pages/StoreDetailPage";
@@ -29,6 +30,7 @@ export default function App() {
           <Route path="/templates" element={<TemplatesPage />} />
           <Route path="/templates/:id" element={<TemplateDetailPage />} />
           <Route path="/omnihubs" element={<OmnihubsPage />} />
+          <Route path="/omnihubs/:id/record" element={<HubRecordPage />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

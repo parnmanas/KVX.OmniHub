@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from "react";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -110,21 +111,43 @@ export default function OmnihubsPage() {
                     {h.equipment?.name ?? "—"}
                   </td>
                   <td className="px-4 py-3 text-right">
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => {
-                        if (
-                          confirm(
-                            `OmniHub "${h.name ?? h.deviceId}" 를 삭제할까요?`,
-                          )
-                        ) {
-                          deleteHub.mutate(h.id);
-                        }
-                      }}
-                    >
-                      삭제
-                    </Button>
+                    <div className="flex justify-end gap-2">
+                      {h.status === "online" ? (
+                        <Link to={`/omnihubs/${h.id}/record`}>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            title="이 OmniHub 로 IR 신호 녹음"
+                          >
+                            ● 녹음
+                          </Button>
+                        </Link>
+                      ) : (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled
+                          title="OmniHub 가 오프라인입니다"
+                        >
+                          ● 녹음
+                        </Button>
+                      )}
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => {
+                          if (
+                            confirm(
+                              `OmniHub "${h.name ?? h.deviceId}" 를 삭제할까요?`,
+                            )
+                          ) {
+                            deleteHub.mutate(h.id);
+                          }
+                        }}
+                      >
+                        삭제
+                      </Button>
+                    </div>
                   </td>
                 </tr>
               ))}
