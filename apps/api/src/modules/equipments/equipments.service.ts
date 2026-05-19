@@ -3,15 +3,18 @@ import {
   ConflictException,
   Injectable,
   NotFoundException,
+  ServiceUnavailableException,
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import {
+  ControlLog,
   Equipment,
   EquipmentFunction,
   OmniHubDevice,
   Store,
 } from "../../entities";
+import { OmnihubGateway } from "../../gateways/omnihub.gateway";
 import type { CreateEquipmentDto } from "./dto/create-equipment.dto";
 import type { UpdateEquipmentDto } from "./dto/update-equipment.dto";
 import type {
@@ -30,6 +33,9 @@ export class EquipmentsService {
     private readonly stores: Repository<Store>,
     @InjectRepository(OmniHubDevice)
     private readonly devices: Repository<OmniHubDevice>,
+    @InjectRepository(ControlLog)
+    private readonly controlLogs: Repository<ControlLog>,
+    private readonly gateway: OmnihubGateway,
   ) {}
 
   // ---------- equipments ----------
@@ -160,6 +166,102 @@ export class EquipmentsService {
     if (!result.affected) {
       throw new NotFoundException(`function not found: ${id}`);
     }
+  }
+
+  // ---------- IR record / play ----------
+
+  async recordFunction(
+    id: string,
+    timeoutMs?: number,
+  ): Promise<EquipmentFunction> {
+    const fn = await this.functions.findOne({ where: { id } });
+    if (!fn) throw new NotFoundException(`function not found: ${id}`);
+    if (fn.controlType !== "IR") {
+      throw new BadRequestException("only IR functions can be recorded");
+    }
+    const omnihubId = await this.requireOmnihubForFunction(fn);
+
+    let learned;
+    try {
+      learned = await this.gateway.requestIrLearn(omnihubId, timeoutMs);
+    } catch (err) {
+      await this.logControl(fn, "fail", (err as Error).message);
+      const msg = (err as Error).message;
+      if (msg === "omnihub offline") {
+        throw new ServiceUnavailableException(msg);
+      }
+      if (msg === "learn timeout") {
+        await this.logControl(fn, "timeout", msg);
+        throw new ServiceUnavailableException(msg);
+      }
+      throw new ServiceUnavailableException(msg);
+    }
+
+    fn.payload = { controlType: "IR", data: learned };
+    const saved = await this.functions.save(fn);
+    await this.logControl(saved, "success", null);
+    return saved;
+  }
+
+  async playFunction(id: string): Promise<void> {
+    const fn = await this.functions.findOne({ where: { id } });
+    if (!fn) throw new NotFoundException(`function not found: ${id}`);
+    if (fn.controlType !== "IR") {
+      throw new BadRequestException("only IR functions are playable yet");
+    }
+    if (fn.payload.controlType !== "IR") {
+      throw new BadRequestException("function payload is not IR");
+    }
+    const ir = fn.payload.data;
+    const hasDecoded = ir.decoded !== null;
+    const hasRaw = Array.isArray(ir.raw) && ir.raw.length > 0;
+    if (!hasDecoded && !hasRaw) {
+      throw new BadRequestException(
+        "function has no recorded IR signal — record it first",
+      );
+    }
+    const omnihubId = await this.requireOmnihubForFunction(fn);
+
+    try {
+      await this.gateway.requestIrSend(omnihubId, ir);
+      await this.logControl(fn, "success", null);
+    } catch (err) {
+      const msg = (err as Error).message;
+      const result = msg.includes("timeout") ? "timeout" : "fail";
+      await this.logControl(fn, result, msg);
+      throw new ServiceUnavailableException(msg);
+    }
+  }
+
+  private async requireOmnihubForFunction(
+    fn: EquipmentFunction,
+  ): Promise<string> {
+    const eq = await this.equipments.findOne({ where: { id: fn.equipmentId } });
+    if (!eq) {
+      throw new NotFoundException(`equipment not found: ${fn.equipmentId}`);
+    }
+    if (!eq.omnihubId) {
+      throw new BadRequestException(
+        "equipment has no OmniHub assigned — assign one first",
+      );
+    }
+    return eq.omnihubId;
+  }
+
+  private async logControl(
+    fn: EquipmentFunction,
+    result: "success" | "fail" | "timeout",
+    errorMessage: string | null,
+  ): Promise<void> {
+    await this.controlLogs.save(
+      this.controlLogs.create({
+        equipmentId: fn.equipmentId,
+        functionId: fn.id,
+        triggeredBy: "user",
+        result,
+        errorMessage,
+      }),
+    );
   }
 
   // ---------- helpers ----------

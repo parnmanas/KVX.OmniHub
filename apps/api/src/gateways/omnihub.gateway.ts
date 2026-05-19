@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import {
   Injectable,
   Logger,
@@ -12,10 +13,12 @@ import {
 } from "@nestjs/websockets";
 import { InjectRepository } from "@nestjs/typeorm";
 import {
+  DEFAULT_IR_LEARN_TIMEOUT_MS,
   HEARTBEAT_INTERVAL_MS,
   HEARTBEAT_TIMEOUT_MS,
   WS_PATH,
   type DeviceToServerMessage,
+  type IrPayload,
   type ServerToDeviceMessage,
 } from "@omnihub/shared";
 import { Repository } from "typeorm";
@@ -23,6 +26,18 @@ import type { Server, WebSocket } from "ws";
 import { OmniHubDevice } from "../entities";
 import { DeviceRegistry } from "./device-registry.service";
 import { normalizeMac, verifyToken } from "./pairing.service";
+
+type PendingKind = "ir_learn" | "ir_send";
+
+interface PendingRequest {
+  kind: PendingKind;
+  deviceId: string;
+  resolve: (value: unknown) => void;
+  reject: (err: Error) => void;
+  timer: NodeJS.Timeout;
+}
+
+const SEND_ACK_TIMEOUT_MS = 5_000;
 
 @Injectable()
 @WebSocketGateway({ path: WS_PATH })
@@ -40,6 +55,8 @@ export class OmnihubGateway
   server!: Server;
 
   private heartbeatTimer: NodeJS.Timeout | null = null;
+
+  private readonly pending = new Map<string, PendingRequest>();
 
   constructor(
     @InjectRepository(OmniHubDevice)
@@ -76,6 +93,7 @@ export class OmnihubGateway
     if (deviceId) {
       this.log.log(`device ${deviceId} disconnected`);
       await this.devices.update({ deviceId }, { status: "offline" });
+      this.rejectPendingForDevice(deviceId, "device disconnected");
     }
   }
 
@@ -116,10 +134,10 @@ export class OmnihubGateway
           this.onPong(client);
           return;
         case "ack":
-          // forwarded to caller via pending promise (Phase 5)
+          this.onAck(msg);
           return;
         case "ir_learned":
-          // handled in Phase 5
+          this.onIrLearned(msg);
           return;
         default: {
           const unknown = msg as { type: string };
@@ -294,6 +312,104 @@ export class OmnihubGateway
     this.send(pending.ws, { type: "pair_ack", token });
 
     return { device, token };
+  }
+
+  // ---------- IR control (called from services) ----------
+
+  async requestIrLearn(
+    omnihubRowId: string,
+    timeoutMs: number = DEFAULT_IR_LEARN_TIMEOUT_MS,
+  ): Promise<IrPayload> {
+    const { ws, deviceId } = await this.getDeviceSocket(omnihubRowId);
+    const requestId = randomUUID();
+    return new Promise<IrPayload>((resolve, reject) => {
+      const timer = setTimeout(() => {
+        this.pending.delete(requestId);
+        reject(new Error("learn timeout"));
+      }, timeoutMs + 1_000); // give device a 1s buffer over its own timer
+      this.pending.set(requestId, {
+        kind: "ir_learn",
+        deviceId,
+        resolve: resolve as (v: unknown) => void,
+        reject,
+        timer,
+      });
+      this.send(ws, { type: "ir_learn", requestId, timeoutMs });
+    });
+  }
+
+  async requestIrSend(
+    omnihubRowId: string,
+    payload: IrPayload,
+    repeat?: number,
+  ): Promise<void> {
+    const { ws, deviceId } = await this.getDeviceSocket(omnihubRowId);
+    const requestId = randomUUID();
+    return new Promise<void>((resolve, reject) => {
+      const timer = setTimeout(() => {
+        this.pending.delete(requestId);
+        reject(new Error("send ack timeout"));
+      }, SEND_ACK_TIMEOUT_MS);
+      this.pending.set(requestId, {
+        kind: "ir_send",
+        deviceId,
+        resolve: () => resolve(),
+        reject,
+        timer,
+      });
+      this.send(ws, { type: "ir_send", requestId, payload, repeat });
+    });
+  }
+
+  private async getDeviceSocket(
+    omnihubRowId: string,
+  ): Promise<{ ws: WebSocket; deviceId: string }> {
+    const device = await this.devices.findOne({ where: { id: omnihubRowId } });
+    if (!device) throw new Error("omnihub not found");
+    const auth = this.registry.get(device.deviceId);
+    if (!auth) throw new Error("omnihub offline");
+    return { ws: auth.ws, deviceId: device.deviceId };
+  }
+
+  private onAck(
+    msg: Extract<DeviceToServerMessage, { type: "ack" }>,
+  ): void {
+    const pending = this.pending.get(msg.requestId);
+    if (!pending) return;
+    clearTimeout(pending.timer);
+    this.pending.delete(msg.requestId);
+    if (msg.ok) {
+      pending.resolve(undefined);
+    } else {
+      pending.reject(new Error(msg.error ?? "device reported failure"));
+    }
+  }
+
+  private onIrLearned(
+    msg: Extract<DeviceToServerMessage, { type: "ir_learned" }>,
+  ): void {
+    const pending = this.pending.get(msg.requestId);
+    if (!pending) {
+      this.log.warn(`unmatched ir_learned for requestId=${msg.requestId}`);
+      return;
+    }
+    clearTimeout(pending.timer);
+    this.pending.delete(msg.requestId);
+    const payload: IrPayload = {
+      protocol: msg.protocol,
+      decoded: msg.decoded,
+      raw: msg.raw,
+    };
+    pending.resolve(payload);
+  }
+
+  private rejectPendingForDevice(deviceId: string, reason: string): void {
+    for (const [id, p] of this.pending) {
+      if (p.deviceId !== deviceId) continue;
+      clearTimeout(p.timer);
+      this.pending.delete(id);
+      p.reject(new Error(reason));
+    }
   }
 
   // ---------- heartbeat ----------

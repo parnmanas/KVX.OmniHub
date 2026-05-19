@@ -148,6 +148,11 @@ export default function StoreDetailPage() {
                   </p>
                 </div>
                 <div className="mt-4 flex justify-end gap-2">
+                  <Link to={`/equipments/${e.id}`}>
+                    <Button variant="outline" size="sm">
+                      기능 관리
+                    </Button>
+                  </Link>
                   <Button
                     variant="destructive"
                     size="sm"
