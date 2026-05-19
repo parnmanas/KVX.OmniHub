@@ -8,6 +8,7 @@ import {
   Store,
   TemplateFunction,
 } from "../../entities";
+import { GatewaysModule } from "../../gateways/gateways.module";
 import { TemplatesController } from "./templates.controller";
 import { TemplatesService } from "./templates.service";
 
@@ -21,6 +22,7 @@ import { TemplatesService } from "./templates.service";
       Store,
       OmniHubDevice,
     ]),
+    GatewaysModule,
   ],
   controllers: [TemplatesController],
   providers: [TemplatesService],

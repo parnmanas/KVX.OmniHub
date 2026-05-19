@@ -132,6 +132,27 @@ export function useDeleteTemplateFunction(templateId: string) {
   });
 }
 
+export function useRecordTemplateFunction(templateId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (vars: {
+      id: string;
+      omnihubId: string;
+      timeoutMs?: number;
+    }) => {
+      const { data } = await api.post<TemplateFunction>(
+        `/template-functions/${vars.id}/record`,
+        { omnihubId: vars.omnihubId, timeoutMs: vars.timeoutMs },
+      );
+      return data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: templatesKeys.detail(templateId) });
+      qc.invalidateQueries({ queryKey: templatesKeys.all });
+    },
+  });
+}
+
 // ---------- instantiate ----------
 
 export function useInstantiateTemplate() {
