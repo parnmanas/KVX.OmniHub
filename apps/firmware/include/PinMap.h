@@ -23,3 +23,32 @@
 #ifndef RESET_HOLD_MS
 #define RESET_HOLD_MS 5000
 #endif
+
+// ---------- Relay outputs ----------
+// Number of relay channels wired to the board. Most cheap relay HATs ship as
+// 1/2/4-channel; bump this and add PIN_RELAY_N defines below if you wire more.
+// Channels referenced by RELAY payloads use 0-based indexing.
+#ifndef PIN_RELAY_COUNT
+#define PIN_RELAY_COUNT 4
+#endif
+
+// Default pin assignments — picked from "safe to use as output on ESP32 DevKit-C"
+// pins (no strapping/UART/SPI conflicts). Override per channel via -D flags.
+#ifndef PIN_RELAY_0
+#define PIN_RELAY_0 25
+#endif
+#ifndef PIN_RELAY_1
+#define PIN_RELAY_1 26
+#endif
+#ifndef PIN_RELAY_2
+#define PIN_RELAY_2 27
+#endif
+#ifndef PIN_RELAY_3
+#define PIN_RELAY_3 32
+#endif
+
+// Many cheap relay boards are active-LOW (HIGH on the input pin = relay OFF,
+// LOW = relay ON). Set to 1 if your board switches on HIGH instead.
+#ifndef PIN_RELAY_ACTIVE_HIGH
+#define PIN_RELAY_ACTIVE_HIGH 0
+#endif

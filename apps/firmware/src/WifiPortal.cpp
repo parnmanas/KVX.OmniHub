@@ -30,22 +30,45 @@ bool start(DeviceConfig& cfg, const char* apSsid, bool forcePortal) {
 
   bool connected = false;
   if (forcePortal || cfg.wifiSsid.length() == 0) {
+    Serial.printf("[wifi] opening setup portal SSID='%s' (waiting for user)\n",
+                  apSsid);
     connected = wm.startConfigPortal(apSsid);
   } else {
     // Try saved creds first; fall back to the portal on failure.
+    Serial.printf("[wifi] connecting to '%s' (timeout 20s)\n",
+                  cfg.wifiSsid.c_str());
     WiFi.mode(WIFI_STA);
     WiFi.begin(cfg.wifiSsid.c_str(), cfg.wifiPassword.c_str());
     uint32_t start = millis();
+    uint32_t lastTick = start;
     while (WiFi.status() != WL_CONNECTED && millis() - start < 20000) {
       delay(250);
+      uint32_t now = millis();
+      if (now - lastTick >= 2000) {
+        Serial.printf("[wifi] still connecting (status=%d, elapsed=%lus)\n",
+                      (int)WiFi.status(), (unsigned long)((now - start) / 1000));
+        lastTick = now;
+      }
     }
     connected = WiFi.status() == WL_CONNECTED;
-    if (!connected) {
+    if (connected) {
+      Serial.printf("[wifi] STA connected: ip=%s rssi=%ddBm\n",
+                    WiFi.localIP().toString().c_str(), WiFi.RSSI());
+    } else {
+      Serial.printf("[wifi] STA failed after %lums; opening setup portal\n",
+                    (unsigned long)(millis() - start));
       connected = wm.startConfigPortal(apSsid);
     }
   }
 
-  if (!connected) return false;
+  if (!connected) {
+    Serial.println("[wifi] portal exited without a connection");
+    return false;
+  }
+  Serial.printf("[wifi] online: ssid='%s' ip=%s rssi=%ddBm\n",
+                WiFi.SSID().c_str(),
+                WiFi.localIP().toString().c_str(),
+                WiFi.RSSI());
 
   // Read back any values changed by the portal.
   cfg.wifiSsid = WiFi.SSID();

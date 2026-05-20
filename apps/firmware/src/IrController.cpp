@@ -6,13 +6,19 @@
 
 namespace {
 constexpr uint16_t RX_BUFFER_SIZE = 1024;
-constexpr uint8_t RX_TIMEOUT_MS = 50;     // gap between IR bursts
-// Real consumer IR signals decode to 60+ raw edges (NEC/Samsung/LG ≈ 67,
-// aircon protocols 100+). Known protocols are identified regardless of
-// this threshold — it only gates the UNKNOWN fallback. We set it high
-// enough that ambient-noise bursts (typically < 20 edges) can never be
-// mistaken for a real remote. Legitimate UNKNOWN remotes still pass.
-constexpr uint16_t MIN_UNKNOWN_SIZE = 100;
+// Gap that terminates a burst. Was 50ms but that fragments NEC-family
+// signals (NEC/LG/Samsung) that send command + ~100ms gap + repeat code
+// into two separate captures; the second capture was a 4-edge repeat
+// stub that always failed the noise filter. 90ms is short enough that
+// a button release still ends the burst quickly but long enough to keep
+// command+repeat together.
+constexpr uint8_t RX_TIMEOUT_MS = 90;
+// Floor for accepting a raw-only (UNKNOWN protocol) capture. Real consumer
+// remotes are 30+ edges (simple toy remotes) up to 100+ (aircon). Ambient
+// EMI / TSOP self-noise bursts are typically < 20 edges. 30 is the tradeoff
+// that lets LG/NEC family pass when the library fails to label them, while
+// still rejecting most noise.
+constexpr uint16_t MIN_UNKNOWN_SIZE = 30;
 
 IRrecv* g_recv = nullptr;
 IRsend* g_send = nullptr;
@@ -93,9 +99,31 @@ bool send(const JsonVariantConst& payload) {
     }
   }
 
-  // Raw fallback.
+  // Raw fallback. Defense-in-depth: a learn() bug or malformed payload could
+  // hand us garbage captured from a noisy / wrong sensor. Refuse anything
+  // that doesn't look like a plausible consumer-IR burst before blasting it.
   if (raw && raw.size() > 0) {
     const size_t n = raw.size();
+    // Size sanity: too short = noise glitch, too long = buffer-overflow trash.
+    if (n < 20) {
+      Serial.printf("[ir] reject raw send: too short (%u edges)\n", (unsigned)n);
+      return false;
+    }
+    if (n > 800) {
+      Serial.printf("[ir] reject raw send: too long (%u edges) — looks like "
+                    "an overflow capture\n", (unsigned)n);
+      return false;
+    }
+    // Per-pulse sanity: real IR pulses are ~200 us to ~10 ms. Anything outside
+    // 50 us .. 20000 us is implausible and almost certainly malformed.
+    for (size_t i = 0; i < n; ++i) {
+      uint32_t v = raw[i].as<uint32_t>();
+      if (v < 50 || v > 20000) {
+        Serial.printf("[ir] reject raw send: implausible pulse %u us at "
+                      "index %u\n", (unsigned)v, (unsigned)i);
+        return false;
+      }
+    }
     auto* buf = static_cast<uint16_t*>(malloc(n * sizeof(uint16_t)));
     if (!buf) return false;
     for (size_t i = 0; i < n; ++i) {
@@ -110,36 +138,96 @@ bool send(const JsonVariantConst& payload) {
 }
 
 bool learn(uint32_t timeoutMs, JsonObject out) {
-  if (!g_recv) return false;
+  if (!g_recv) {
+    Serial.println("[ir] ERROR: receiver not initialized (begin() not called?)");
+    return false;
+  }
+
+  Serial.println("[ir] ============ LEARN START ============");
+  Serial.printf("[ir] pin=GPIO%d  bufsize=%u  burst_gap=%ums  "
+                "min_unknown=%u  total_timeout=%ums\n",
+                PIN_IR_RX, RX_BUFFER_SIZE, (unsigned)RX_TIMEOUT_MS,
+                (unsigned)MIN_UNKNOWN_SIZE, (unsigned)timeoutMs);
+
+  // TSOP-style receivers idle HIGH and pull LOW when receiving a 38kHz burst.
+  // If we see LOW with no remote pressed, wiring is wrong (no signal/no pull-up).
+  // If we see HIGH then quickly LOW when remote is pressed, the pin is good.
+  Serial.printf("[ir] pin level at start: %s "
+                "(expect HIGH idle for TSOP38xxx)\n",
+                digitalRead(PIN_IR_RX) ? "HIGH" : "LOW <- suspicious if no remote pressed");
+
   decode_results res;
   g_recv->enableIRIn();
+  // Discard any stale capture left in the shadow buffer from a previous
+  // learn() call. Without this, the very first decode() can return an old
+  // burst captured before this learn() started.
+  g_recv->resume();
+  Serial.println("[ir] receiver enabled, shadow buffer cleared. Press the remote.");
+
   uint32_t start = millis();
+  uint32_t lastTick = start;
+  uint32_t captureCount = 0;
   bool got = false;
+
   while (millis() - start < timeoutMs) {
     if (g_recv->decode(&res)) {
-      // A known protocol with bits is always a good capture. For UNKNOWN,
-      // also require a reasonable number of raw edges, otherwise it's
-      // almost certainly an ambient-noise glitch — discard and keep
-      // listening within the user's timeout window.
-      const bool knownGood =
-          res.decode_type != UNKNOWN && res.bits > 0;
-      const bool rawGood =
-          res.decode_type == UNKNOWN && res.rawlen >= MIN_UNKNOWN_SIZE;
-      if (knownGood || rawGood) {
+      captureCount++;
+      uint32_t elapsed = millis() - start;
+      Serial.printf("[ir] #%u at t=%lums: type=%s bits=%u rawlen=%u value=0x%llX\n",
+                    (unsigned)captureCount, (unsigned long)elapsed,
+                    typeToString(res.decode_type).c_str(),
+                    res.bits, res.rawlen,
+                    (unsigned long long)res.value);
+
+      // Dump first ~16 raw edges (in µs) so we can spot:
+      //   - obvious noise (random short values like "120 80 40 60")
+      //   - real signal (e.g. NEC: "9000 4500 560 560 560 1690 ...")
+      //   - LG signal (similar to NEC: "9000 4500 ... 28 bits ... 560")
+      if (res.rawlen > 1) {
+        Serial.print("[ir]    raw[1..]:");
+        const uint16_t shown = res.rawlen < 17 ? res.rawlen : 17;
+        for (uint16_t i = 1; i < shown; ++i) {
+          Serial.printf(" %u", (unsigned)(res.rawbuf[i] * kRawTick));
+        }
+        if (res.rawlen > 17) Serial.printf(" ... (+%u more)", res.rawlen - 17);
+        Serial.println(" us");
+      }
+
+      const bool definitive = res.decode_type != UNKNOWN && res.bits > 0;
+      // Upper bound: the longest legitimate consumer IR signal is < 600 edges
+      // (large aircon protocols max around 300). Anything near the 1024-edge
+      // buffer cap is a buffer-overflow capture of noise — refuse it.
+      const bool acceptableRaw =
+          res.rawlen >= MIN_UNKNOWN_SIZE && res.rawlen <= 800;
+      if (definitive || acceptableRaw) {
+        Serial.println("[ir]    -> ACCEPTED");
         got = true;
         break;
       }
-      Serial.printf(
-          "[ir] discard noise: decode=%d bits=%d rawlen=%u\n",
-          static_cast<int>(res.decode_type), res.bits, res.rawlen);
+      Serial.println("[ir]    -> discard (below threshold)");
       g_recv->resume();  // re-arm capture, otherwise decode() never fires again
+    }
+
+    // Heartbeat every 2s so we can tell whether the loop is alive and whether
+    // any captures are accumulating but being filtered.
+    uint32_t now = millis();
+    if (now - lastTick >= 2000) {
+      Serial.printf("[ir] ... listening (t=%lus, captures=%u, pin=%s)\n",
+                    (unsigned long)((now - start) / 1000),
+                    (unsigned)captureCount,
+                    digitalRead(PIN_IR_RX) ? "HIGH" : "LOW");
+      lastTick = now;
     }
     delay(20);
   }
+
   if (!got) {
+    Serial.printf("[ir] ============ TIMEOUT: %u captures in %ums ============\n",
+                  (unsigned)captureCount, (unsigned)timeoutMs);
     g_recv->disableIRIn();
     return false;
   }
+  Serial.println("[ir] ============ LEARN OK ============");
 
   out["protocol"] = protoToString(res.decode_type);
   if (res.decode_type != UNKNOWN && res.bits > 0) {

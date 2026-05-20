@@ -6,6 +6,7 @@
 
 #include "FirmwareVersion.h"
 #include "IrController.h"
+#include "RelayController.h"
 
 namespace {
 
@@ -99,6 +100,33 @@ void onIrLearn(const JsonDocument& msg) {
   sendJson(outDoc);
 }
 
+void onRelaySet(const JsonDocument& msg) {
+  const char* requestId = msg["requestId"] | "";
+  JsonVariantConst p = msg["payload"];
+  int channel = p["channel"] | -1;
+  const char* stateStr = p["state"] | "";
+  uint32_t durationMs = p["durationMs"] | 0;
+
+  RelayController::State st;
+  if (strcmp(stateStr, "ON") == 0) st = RelayController::ON;
+  else if (strcmp(stateStr, "OFF") == 0) st = RelayController::OFF;
+  else if (strcmp(stateStr, "TOGGLE") == 0) st = RelayController::TOGGLE;
+  else {
+    Serial.printf("[ws] relay_set invalid state '%s'\n", stateStr);
+    sendAck(requestId, false, "invalid_state");
+    return;
+  }
+  if (channel < 0 || channel >= RelayController::channelCount()) {
+    Serial.printf("[ws] relay_set invalid channel %d (have %u)\n",
+                  channel, (unsigned)RelayController::channelCount());
+    sendAck(requestId, false, "invalid_channel");
+    return;
+  }
+  bool ok = RelayController::set(
+      static_cast<uint8_t>(channel), st, durationMs);
+  sendAck(requestId, ok, ok ? nullptr : "set_failed");
+}
+
 void onMessage(uint8_t* payload, size_t length) {
   JsonDocument doc;
   DeserializationError err = deserializeJson(doc, payload, length);
@@ -125,6 +153,8 @@ void onMessage(uint8_t* payload, size_t length) {
     onIrSend(doc);
   } else if (strcmp(type, "ir_learn") == 0) {
     onIrLearn(doc);
+  } else if (strcmp(type, "relay_set") == 0) {
+    onRelaySet(doc);
   } else if (strcmp(type, "error") == 0) {
     const char* code = doc["code"] | "?";
     const char* msg = doc["message"] | "";
@@ -146,16 +176,24 @@ void onMessage(uint8_t* payload, size_t length) {
 void onEvent(WStype_t type, uint8_t* payload, size_t length) {
   switch (type) {
     case WStype_CONNECTED:
-      Serial.printf("[ws] connected to %s\n", g_cfg.serverHost.c_str());
+      Serial.printf("[ws] connected to %s://%s:%u%s\n",
+                    g_cfg.tls ? "wss" : "ws",
+                    g_cfg.serverHost.c_str(),
+                    g_cfg.serverPort,
+                    reinterpret_cast<const char*>(payload));
       g_authenticated = false;
       if (g_cfg.authToken.length() > 0) {
+        Serial.println("[ws] sending hello with stored token");
         sendHello();
       } else {
+        Serial.printf("[ws] no token -> sending pair_request (code=%s)\n",
+                      g_cfg.pairingCode.c_str());
         sendPairRequest();
       }
       break;
     case WStype_DISCONNECTED:
-      Serial.println("[ws] disconnected");
+      Serial.printf("[ws] disconnected (will retry in %ums)\n",
+                    (unsigned)WS_RECONNECT_MS);
       g_authenticated = false;
       break;
     case WStype_TEXT:
@@ -177,6 +215,13 @@ namespace HubClient {
 void begin(const DeviceConfig& cfg) {
   g_cfg = cfg;
   const char* path = "/ws";
+  Serial.printf("[ws] target: %s://%s:%u%s (reconnect=%ums, token=%s)\n",
+                g_cfg.tls ? "wss" : "ws",
+                g_cfg.serverHost.c_str(),
+                g_cfg.serverPort,
+                path,
+                (unsigned)WS_RECONNECT_MS,
+                g_cfg.authToken.length() ? "present" : "absent");
   if (g_cfg.tls) {
     g_ws.beginSSL(g_cfg.serverHost.c_str(), g_cfg.serverPort, path);
   } else {
