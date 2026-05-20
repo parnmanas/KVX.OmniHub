@@ -12,8 +12,8 @@ import {
   ControlLog,
   Equipment,
   EquipmentFunction,
+  Location,
   OmniHubDevice,
-  Store,
 } from "../../entities";
 import { OmnihubGateway } from "../../gateways/omnihub.gateway";
 import { PresetsService } from "../presets/presets.service";
@@ -58,8 +58,8 @@ export class EquipmentsService {
     private readonly equipments: Repository<Equipment>,
     @InjectRepository(EquipmentFunction)
     private readonly functions: Repository<EquipmentFunction>,
-    @InjectRepository(Store)
-    private readonly stores: Repository<Store>,
+    @InjectRepository(Location)
+    private readonly locations: Repository<Location>,
     @InjectRepository(OmniHubDevice)
     private readonly devices: Repository<OmniHubDevice>,
     @InjectRepository(ControlLog)
@@ -70,9 +70,26 @@ export class EquipmentsService {
 
   // ---------- equipments ----------
 
-  list(storeId?: string): Promise<Equipment[]> {
+  list(locationId?: string, storeId?: string): Promise<Equipment[]> {
+    if (locationId) {
+      return this.equipments.find({
+        where: { locationId },
+        order: { createdAt: "ASC" },
+        relations: { omnihub: true, functions: true },
+      });
+    }
+    if (storeId) {
+      // All equipments across all locations of this store.
+      return this.equipments
+        .createQueryBuilder("eq")
+        .leftJoinAndSelect("eq.omnihub", "omnihub")
+        .leftJoinAndSelect("eq.functions", "functions")
+        .leftJoin("eq.location", "location")
+        .where("location.storeId = :storeId", { storeId })
+        .orderBy("eq.createdAt", "ASC")
+        .getMany();
+    }
     return this.equipments.find({
-      where: storeId ? { storeId } : {},
       order: { createdAt: "ASC" },
       relations: { omnihub: true, functions: true },
     });
@@ -81,25 +98,29 @@ export class EquipmentsService {
   async get(id: string): Promise<Equipment> {
     const eq = await this.equipments.findOne({
       where: { id },
-      relations: { store: true, omnihub: true, functions: true },
+      relations: {
+        location: { store: true },
+        omnihub: true,
+        functions: true,
+      },
     });
     if (!eq) throw new NotFoundException(`equipment not found: ${id}`);
     return eq;
   }
 
   async create(dto: CreateEquipmentDto): Promise<Equipment> {
-    const storeExists = await this.stores.exists({
-      where: { id: dto.storeId },
+    const locationExists = await this.locations.exists({
+      where: { id: dto.locationId },
     });
-    if (!storeExists) {
-      throw new BadRequestException(`store not found: ${dto.storeId}`);
+    if (!locationExists) {
+      throw new BadRequestException(`location not found: ${dto.locationId}`);
     }
     if (dto.omnihubId) {
       await this.assertOmnihubAvailable(dto.omnihubId, null);
     }
     return this.equipments.save(
       this.equipments.create({
-        storeId: dto.storeId,
+        locationId: dto.locationId,
         type: dto.type,
         manufacturer: dto.manufacturer,
         model: dto.model,
@@ -143,9 +164,11 @@ export class EquipmentsService {
    * leave a half-populated equipment behind.
    */
   async createFromPreset(dto: FromPresetDto): Promise<Equipment> {
-    const storeExists = await this.stores.exists({ where: { id: dto.storeId } });
-    if (!storeExists) {
-      throw new BadRequestException(`store not found: ${dto.storeId}`);
+    const locationExists = await this.locations.exists({
+      where: { id: dto.locationId },
+    });
+    if (!locationExists) {
+      throw new BadRequestException(`location not found: ${dto.locationId}`);
     }
     if (dto.omnihubId) {
       await this.assertOmnihubAvailable(dto.omnihubId, null);
@@ -157,7 +180,7 @@ export class EquipmentsService {
     const type = mapDeviceToType(preset.device);
     const equipment = await this.equipments.save(
       this.equipments.create({
-        storeId: dto.storeId,
+        locationId: dto.locationId,
         type,
         manufacturer: preset.brand,
         model: `${preset.brand} ${preset.device} (preset:${dto.preset})`,

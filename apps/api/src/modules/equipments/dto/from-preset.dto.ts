@@ -9,7 +9,7 @@ import {
 
 export class FromPresetDto {
   @IsUUID()
-  storeId!: string;
+  locationId!: string;
 
   /**
    * Preset basename (e.g. "lg-tv", "samsung-tv"). Must match a file in

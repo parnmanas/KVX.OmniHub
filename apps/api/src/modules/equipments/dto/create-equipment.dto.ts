@@ -12,7 +12,7 @@ const EQUIPMENT_TYPES = Object.values(EquipmentType);
 
 export class CreateEquipmentDto {
   @IsUUID()
-  storeId!: string;
+  locationId!: string;
 
   @IsIn(EQUIPMENT_TYPES)
   type!: EquipmentType;

@@ -19,7 +19,7 @@ export class StoresService {
   async get(id: string): Promise<Store> {
     const store = await this.repo.findOne({
       where: { id },
-      relations: { devices: true, equipments: true },
+      relations: { devices: true, locations: true },
     });
     if (!store) throw new NotFoundException(`store not found: ${id}`);
     return store;

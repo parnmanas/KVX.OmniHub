@@ -47,7 +47,7 @@ export interface CreateTemplateFunctionInput {
 export type UpdateTemplateFunctionInput = Partial<CreateTemplateFunctionInput>;
 
 export interface InstantiateInput {
-  storeId: string;
+  locationId: string;
   name: string;
   omnihubId?: string;
 }

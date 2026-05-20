@@ -4,8 +4,8 @@ import {
   ControlLog,
   Equipment,
   EquipmentFunction,
+  Location,
   OmniHubDevice,
-  Store,
 } from "../../entities";
 import { GatewaysModule } from "../../gateways/gateways.module";
 import { PresetsModule } from "../presets/presets.module";
@@ -18,8 +18,8 @@ import { EquipmentsService } from "./equipments.service";
       ControlLog,
       Equipment,
       EquipmentFunction,
+      Location,
       OmniHubDevice,
-      Store,
     ]),
     GatewaysModule,
     PresetsModule,

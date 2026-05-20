@@ -11,8 +11,8 @@ import {
   Equipment,
   EquipmentFunction,
   EquipmentTemplate,
+  Location,
   OmniHubDevice,
-  Store,
   TemplateFunction,
 } from "../../entities";
 import { OmnihubGateway } from "../../gateways/omnihub.gateway";
@@ -35,8 +35,8 @@ export class TemplatesService {
     private readonly equipments: Repository<Equipment>,
     @InjectRepository(EquipmentFunction)
     private readonly equipmentFunctions: Repository<EquipmentFunction>,
-    @InjectRepository(Store)
-    private readonly stores: Repository<Store>,
+    @InjectRepository(Location)
+    private readonly locations: Repository<Location>,
     @InjectRepository(OmniHubDevice)
     private readonly devices: Repository<OmniHubDevice>,
     private readonly dataSource: DataSource,
@@ -204,11 +204,11 @@ export class TemplatesService {
     });
     if (!tpl) throw new NotFoundException(`template not found: ${templateId}`);
 
-    const storeExists = await this.stores.exists({
-      where: { id: dto.storeId },
+    const locationExists = await this.locations.exists({
+      where: { id: dto.locationId },
     });
-    if (!storeExists) {
-      throw new BadRequestException(`store not found: ${dto.storeId}`);
+    if (!locationExists) {
+      throw new BadRequestException(`location not found: ${dto.locationId}`);
     }
 
     if (dto.omnihubId) {
@@ -229,7 +229,7 @@ export class TemplatesService {
     return this.dataSource.transaction(async (trx) => {
       const eq = await trx.save(
         trx.create(Equipment, {
-          storeId: dto.storeId,
+          locationId: dto.locationId,
           type: tpl.type,
           manufacturer: tpl.manufacturer,
           model: tpl.model,

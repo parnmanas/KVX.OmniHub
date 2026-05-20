@@ -30,8 +30,11 @@ export class EquipmentsController {
   // ---------- equipments ----------
 
   @Get("equipments")
-  list(@Query("storeId") storeId?: string): Promise<Equipment[]> {
-    return this.service.list(storeId);
+  list(
+    @Query("locationId") locationId?: string,
+    @Query("storeId") storeId?: string,
+  ): Promise<Equipment[]> {
+    return this.service.list(locationId, storeId);
   }
 
   @Get("equipments/:id")

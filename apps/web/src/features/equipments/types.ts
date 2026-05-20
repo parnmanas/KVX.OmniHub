@@ -14,7 +14,13 @@ export interface EquipmentFunction {
 
 export interface Equipment {
   id: string;
-  storeId: string;
+  locationId: string;
+  location?: {
+    id: string;
+    name: string;
+    storeId: string;
+    store?: { id: string; name: string };
+  };
   type: EquipmentType;
   manufacturer: string;
   model: string;
@@ -32,7 +38,7 @@ export interface Equipment {
 }
 
 export interface CreateEquipmentInput {
-  storeId: string;
+  locationId: string;
   type: EquipmentType;
   manufacturer: string;
   model: string;

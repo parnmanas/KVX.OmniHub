@@ -11,8 +11,8 @@ import {
 } from "typeorm";
 import type { EquipmentType } from "@omnihub/shared";
 import { EquipmentFunction } from "./equipment-function.entity";
+import { Location } from "./location.entity";
 import { OmniHubDevice } from "./omnihub-device.entity";
-import { Store } from "./store.entity";
 
 @Entity("equipments")
 export class Equipment {
@@ -31,11 +31,11 @@ export class Equipment {
   @Column()
   name!: string;
 
-  @ManyToOne(() => Store, (s) => s.equipments, { onDelete: "CASCADE" })
-  store!: Store;
+  @ManyToOne(() => Location, (l) => l.equipments, { onDelete: "CASCADE" })
+  location!: Location;
 
   @Column({ type: "uuid" })
-  storeId!: string;
+  locationId!: string;
 
   @OneToOne(() => OmniHubDevice, (d) => d.equipment, { nullable: true })
   @JoinColumn()

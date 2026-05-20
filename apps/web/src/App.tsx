@@ -4,6 +4,7 @@ import { RequireAuth } from "@/components/RequireAuth";
 import DashboardPage from "@/pages/DashboardPage";
 import EquipmentDetailPage from "@/pages/EquipmentDetailPage";
 import HubRecordPage from "@/pages/HubRecordPage";
+import LocationDetailPage from "@/pages/LocationDetailPage";
 import LoginPage from "@/pages/LoginPage";
 import OmnihubsPage from "@/pages/OmnihubsPage";
 import StoreDetailPage from "@/pages/StoreDetailPage";
@@ -26,6 +27,7 @@ export default function App() {
           <Route path="/" element={<DashboardPage />} />
           <Route path="/stores" element={<StoresPage />} />
           <Route path="/stores/:id" element={<StoreDetailPage />} />
+          <Route path="/locations/:id" element={<LocationDetailPage />} />
           <Route path="/equipments/:id" element={<EquipmentDetailPage />} />
           <Route path="/templates" element={<TemplatesPage />} />
           <Route path="/templates/:id" element={<TemplateDetailPage />} />

@@ -78,10 +78,10 @@ export default function EquipmentDetailPage() {
     <div className="space-y-6">
       <div>
         <Link
-          to={`/stores/${eq.storeId}`}
+          to={`/locations/${eq.locationId}`}
           className="text-sm text-muted-foreground hover:underline"
         >
-          ← 매장 상세
+          ← 위치 상세
         </Link>
         <div className="mt-2 flex items-center gap-3">
           <h1 className="text-xl font-semibold">{eq.name}</h1>

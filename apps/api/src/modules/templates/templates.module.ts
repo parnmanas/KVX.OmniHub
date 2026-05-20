@@ -4,8 +4,8 @@ import {
   Equipment,
   EquipmentFunction,
   EquipmentTemplate,
+  Location,
   OmniHubDevice,
-  Store,
   TemplateFunction,
 } from "../../entities";
 import { GatewaysModule } from "../../gateways/gateways.module";
@@ -19,7 +19,7 @@ import { TemplatesService } from "./templates.service";
       TemplateFunction,
       Equipment,
       EquipmentFunction,
-      Store,
+      Location,
       OmniHubDevice,
     ]),
     GatewaysModule,

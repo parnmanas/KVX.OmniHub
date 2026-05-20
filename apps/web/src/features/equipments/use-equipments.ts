@@ -4,7 +4,7 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import { storesKeys } from "@/features/stores/use-stores";
+import { locationsKeys } from "@/features/locations/use-locations";
 import { omnihubsKeys } from "@/features/omnihubs/use-omnihubs";
 import type {
   CreateEquipmentInput,
@@ -13,20 +13,32 @@ import type {
 } from "./types";
 
 export const equipmentsKeys = {
-  byStore: (storeId: string) => ["equipments", "byStore", storeId] as const,
+  byLocation: (locationId: string) =>
+    ["equipments", "byLocation", locationId] as const,
   detail: (id: string) => ["equipments", id] as const,
 };
 
-export function useEquipments(storeId: string | undefined) {
+function invalidateForLocation(
+  qc: ReturnType<typeof useQueryClient>,
+  locationId: string,
+) {
+  qc.invalidateQueries({ queryKey: equipmentsKeys.byLocation(locationId) });
+  qc.invalidateQueries({ queryKey: locationsKeys.detail(locationId) });
+  qc.invalidateQueries({ queryKey: omnihubsKeys.all });
+}
+
+export function useEquipments(locationId: string | undefined) {
   return useQuery({
-    queryKey: storeId ? equipmentsKeys.byStore(storeId) : ["equipments", "none"],
+    queryKey: locationId
+      ? equipmentsKeys.byLocation(locationId)
+      : ["equipments", "none"],
     queryFn: async () => {
       const { data } = await api.get<Equipment[]>("/equipments", {
-        params: { storeId },
+        params: { locationId },
       });
       return data;
     },
-    enabled: Boolean(storeId),
+    enabled: Boolean(locationId),
   });
 }
 
@@ -48,16 +60,12 @@ export function useCreateEquipment() {
       const { data } = await api.post<Equipment>("/equipments", input);
       return data;
     },
-    onSuccess: (data) => {
-      qc.invalidateQueries({ queryKey: equipmentsKeys.byStore(data.storeId) });
-      qc.invalidateQueries({ queryKey: storesKeys.detail(data.storeId) });
-      qc.invalidateQueries({ queryKey: omnihubsKeys.all });
-    },
+    onSuccess: (data) => invalidateForLocation(qc, data.locationId),
   });
 }
 
 export interface CreateEquipmentFromPresetInput {
-  storeId: string;
+  locationId: string;
   preset: string;
   name?: string;
   omnihubId?: string;
@@ -73,11 +81,7 @@ export function useCreateEquipmentFromPreset() {
       );
       return data;
     },
-    onSuccess: (data) => {
-      qc.invalidateQueries({ queryKey: equipmentsKeys.byStore(data.storeId) });
-      qc.invalidateQueries({ queryKey: storesKeys.detail(data.storeId) });
-      qc.invalidateQueries({ queryKey: omnihubsKeys.all });
-    },
+    onSuccess: (data) => invalidateForLocation(qc, data.locationId),
   });
 }
 
@@ -92,10 +96,8 @@ export function useUpdateEquipment() {
       return data;
     },
     onSuccess: (data) => {
-      qc.invalidateQueries({ queryKey: equipmentsKeys.byStore(data.storeId) });
+      invalidateForLocation(qc, data.locationId);
       qc.invalidateQueries({ queryKey: equipmentsKeys.detail(data.id) });
-      qc.invalidateQueries({ queryKey: storesKeys.detail(data.storeId) });
-      qc.invalidateQueries({ queryKey: omnihubsKeys.all });
     },
   });
 }
@@ -103,14 +105,10 @@ export function useUpdateEquipment() {
 export function useDeleteEquipment() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (vars: { id: string; storeId: string }) => {
+    mutationFn: async (vars: { id: string; locationId: string }) => {
       await api.delete(`/equipments/${vars.id}`);
       return vars;
     },
-    onSuccess: (vars) => {
-      qc.invalidateQueries({ queryKey: equipmentsKeys.byStore(vars.storeId) });
-      qc.invalidateQueries({ queryKey: storesKeys.detail(vars.storeId) });
-      qc.invalidateQueries({ queryKey: omnihubsKeys.all });
-    },
+    onSuccess: (vars) => invalidateForLocation(qc, vars.locationId),
   });
 }

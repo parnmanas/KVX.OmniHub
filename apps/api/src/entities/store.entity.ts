@@ -6,7 +6,7 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from "typeorm";
-import { Equipment } from "./equipment.entity";
+import { Location } from "./location.entity";
 import { OmniHubDevice } from "./omnihub-device.entity";
 
 @Entity("stores")
@@ -26,8 +26,8 @@ export class Store {
   @OneToMany(() => OmniHubDevice, (d) => d.store)
   devices!: OmniHubDevice[];
 
-  @OneToMany(() => Equipment, (e) => e.store)
-  equipments!: Equipment[];
+  @OneToMany(() => Location, (l) => l.store)
+  locations!: Location[];
 
   @CreateDateColumn()
   createdAt!: Date;

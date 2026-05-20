@@ -47,14 +47,14 @@ export function useEquipmentFunctions(equipmentId: string | undefined) {
 function invalidateForEquipment(
   qc: ReturnType<typeof useQueryClient>,
   equipmentId: string,
-  storeId?: string,
+  locationId?: string,
 ) {
   qc.invalidateQueries({
     queryKey: equipmentFunctionsKeys.byEquipment(equipmentId),
   });
   qc.invalidateQueries({ queryKey: equipmentsKeys.detail(equipmentId) });
-  if (storeId) {
-    qc.invalidateQueries({ queryKey: equipmentsKeys.byStore(storeId) });
+  if (locationId) {
+    qc.invalidateQueries({ queryKey: equipmentsKeys.byLocation(locationId) });
   }
 }
 

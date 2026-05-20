@@ -5,8 +5,8 @@ import {
 } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { equipmentsKeys } from "@/features/equipments/use-equipments";
+import { locationsKeys } from "@/features/locations/use-locations";
 import { omnihubsKeys } from "@/features/omnihubs/use-omnihubs";
-import { storesKeys } from "@/features/stores/use-stores";
 import type {
   CreateTemplateFunctionInput,
   CreateTemplateInput,
@@ -165,9 +165,13 @@ export function useInstantiateTemplate() {
       );
       return data;
     },
-    onSuccess: (data: { storeId: string }) => {
-      qc.invalidateQueries({ queryKey: equipmentsKeys.byStore(data.storeId) });
-      qc.invalidateQueries({ queryKey: storesKeys.detail(data.storeId) });
+    onSuccess: (data: { locationId: string }) => {
+      qc.invalidateQueries({
+        queryKey: equipmentsKeys.byLocation(data.locationId),
+      });
+      qc.invalidateQueries({
+        queryKey: locationsKeys.detail(data.locationId),
+      });
       qc.invalidateQueries({ queryKey: omnihubsKeys.all });
     },
   });

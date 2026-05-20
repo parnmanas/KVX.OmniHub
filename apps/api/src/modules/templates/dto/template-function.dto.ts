@@ -63,7 +63,7 @@ export class UpdateTemplateFunctionDto {
 
 export class InstantiateTemplateDto {
   @IsString()
-  storeId!: string;
+  locationId!: string;
 
   @IsString()
   @MinLength(1)
