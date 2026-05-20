@@ -19,6 +19,7 @@ import {
   WS_PATH,
   type DeviceToServerMessage,
   type IrPayload,
+  type RelayPayload,
   type ServerToDeviceMessage,
 } from "@omnihub/shared";
 import { Repository } from "typeorm";
@@ -27,7 +28,7 @@ import { OmniHubDevice } from "../entities";
 import { DeviceRegistry } from "./device-registry.service";
 import { normalizeMac, verifyToken } from "./pairing.service";
 
-type PendingKind = "ir_learn" | "ir_send";
+type PendingKind = "ir_learn" | "ir_send" | "relay_set";
 
 interface PendingRequest {
   kind: PendingKind;
@@ -358,6 +359,34 @@ export class OmnihubGateway
         timer,
       });
       this.send(ws, { type: "ir_send", requestId, payload, repeat });
+    });
+  }
+
+  async requestRelaySet(
+    omnihubRowId: string,
+    payload: RelayPayload,
+  ): Promise<void> {
+    const { ws, deviceId } = await this.getDeviceSocket(omnihubRowId);
+    const requestId = randomUUID();
+    // Momentary pulses (durationMs) keep the firmware busy for that span; bump
+    // the ack budget to cover the worst case plus a 1s grace.
+    const ackTimeout =
+      (payload.durationMs ?? 0) > 0
+        ? Math.min(payload.durationMs! + 1_000, 30_000)
+        : SEND_ACK_TIMEOUT_MS;
+    return new Promise<void>((resolve, reject) => {
+      const timer = setTimeout(() => {
+        this.pending.delete(requestId);
+        reject(new Error("relay ack timeout"));
+      }, ackTimeout);
+      this.pending.set(requestId, {
+        kind: "relay_set",
+        deviceId,
+        resolve: () => resolve(),
+        reject,
+        timer,
+      });
+      this.send(ws, { type: "relay_set", requestId, payload });
     });
   }
 

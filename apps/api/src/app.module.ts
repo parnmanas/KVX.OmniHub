@@ -6,6 +6,7 @@ import { GatewaysModule } from "./gateways/gateways.module";
 import { AuthModule } from "./modules/auth/auth.module";
 import { EquipmentsModule } from "./modules/equipments/equipments.module";
 import { OmnihubsModule } from "./modules/omnihubs/omnihubs.module";
+import { PresetsModule } from "./modules/presets/presets.module";
 import { StoresModule } from "./modules/stores/stores.module";
 import { TemplatesModule } from "./modules/templates/templates.module";
 
@@ -20,6 +21,7 @@ import { TemplatesModule } from "./modules/templates/templates.module";
     AuthModule,
     StoresModule,
     OmnihubsModule,
+    PresetsModule,
     TemplatesModule,
     EquipmentsModule,
   ],

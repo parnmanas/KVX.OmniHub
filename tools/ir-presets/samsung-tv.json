@@ -1,0 +1,40 @@
+{
+  "brand": "Samsung",
+  "device": "TV",
+  "notes": [
+    "Samsung NEC32-variant codes — common across HD/SD/Smart TVs since ~2007.",
+    "Identical address prefix 0xE0E0 across nearly all Samsung TV models.",
+    "Newer Samsung models (2020+ with One Remote) also support Bluetooth — IR",
+    "still works for basic ops but advanced features (voice etc.) won't.",
+    "Same NEC codes used by most Samsung HW-series soundbars."
+  ],
+  "carrier": 38000,
+  "commands": {
+    "power":      { "protocol": "SAMSUNG", "decoded": { "value": "E0E040BF", "bits": 32 }, "raw": [] },
+    "mute":       { "protocol": "SAMSUNG", "decoded": { "value": "E0E0F00F", "bits": 32 }, "raw": [] },
+    "vol_up":     { "protocol": "SAMSUNG", "decoded": { "value": "E0E0E01F", "bits": 32 }, "raw": [] },
+    "vol_down":   { "protocol": "SAMSUNG", "decoded": { "value": "E0E0D02F", "bits": 32 }, "raw": [] },
+    "ch_up":      { "protocol": "SAMSUNG", "decoded": { "value": "E0E048B7", "bits": 32 }, "raw": [] },
+    "ch_down":    { "protocol": "SAMSUNG", "decoded": { "value": "E0E008F7", "bits": 32 }, "raw": [] },
+    "input":      { "protocol": "SAMSUNG", "decoded": { "value": "E0E0807F", "bits": 32 }, "raw": [] },
+    "menu":       { "protocol": "SAMSUNG", "decoded": { "value": "E0E058A7", "bits": 32 }, "raw": [] },
+    "home":       { "protocol": "SAMSUNG", "decoded": { "value": "E0E09E61", "bits": 32 }, "raw": [] },
+    "ok":         { "protocol": "SAMSUNG", "decoded": { "value": "E0E016E9", "bits": 32 }, "raw": [] },
+    "up":         { "protocol": "SAMSUNG", "decoded": { "value": "E0E006F9", "bits": 32 }, "raw": [] },
+    "down":       { "protocol": "SAMSUNG", "decoded": { "value": "E0E08679", "bits": 32 }, "raw": [] },
+    "left":       { "protocol": "SAMSUNG", "decoded": { "value": "E0E0A659", "bits": 32 }, "raw": [] },
+    "right":      { "protocol": "SAMSUNG", "decoded": { "value": "E0E046B9", "bits": 32 }, "raw": [] },
+    "back":       { "protocol": "SAMSUNG", "decoded": { "value": "E0E01AE5", "bits": 32 }, "raw": [] },
+    "exit":       { "protocol": "SAMSUNG", "decoded": { "value": "E0E0B44B", "bits": 32 }, "raw": [] },
+    "num_0":      { "protocol": "SAMSUNG", "decoded": { "value": "E0E08877", "bits": 32 }, "raw": [] },
+    "num_1":      { "protocol": "SAMSUNG", "decoded": { "value": "E0E020DF", "bits": 32 }, "raw": [] },
+    "num_2":      { "protocol": "SAMSUNG", "decoded": { "value": "E0E0A05F", "bits": 32 }, "raw": [] },
+    "num_3":      { "protocol": "SAMSUNG", "decoded": { "value": "E0E0609F", "bits": 32 }, "raw": [] },
+    "num_4":      { "protocol": "SAMSUNG", "decoded": { "value": "E0E010EF", "bits": 32 }, "raw": [] },
+    "num_5":      { "protocol": "SAMSUNG", "decoded": { "value": "E0E0906F", "bits": 32 }, "raw": [] },
+    "num_6":      { "protocol": "SAMSUNG", "decoded": { "value": "E0E050AF", "bits": 32 }, "raw": [] },
+    "num_7":      { "protocol": "SAMSUNG", "decoded": { "value": "E0E030CF", "bits": 32 }, "raw": [] },
+    "num_8":      { "protocol": "SAMSUNG", "decoded": { "value": "E0E0B04F", "bits": 32 }, "raw": [] },
+    "num_9":      { "protocol": "SAMSUNG", "decoded": { "value": "E0E0708F", "bits": 32 }, "raw": [] }
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "brand": "Philips",
+  "device": "TV",
+  "notes": [
+    "Philips uses RC5 (12-bit) and RC6 (16-bit/20-bit) protocols.",
+    "These codes are RC5 — the most widely compatible across older Philips TVs.",
+    "Newer Philips Android TVs may need RC6 codes — out of scope here."
+  ],
+  "carrier": 36000,
+  "commands": {
+    "power":      { "protocol": "RC5", "decoded": { "value": "100C", "bits": 13 }, "raw": [] },
+    "mute":       { "protocol": "RC5", "decoded": { "value": "100D", "bits": 13 }, "raw": [] },
+    "vol_up":     { "protocol": "RC5", "decoded": { "value": "1010", "bits": 13 }, "raw": [] },
+    "vol_down":   { "protocol": "RC5", "decoded": { "value": "1011", "bits": 13 }, "raw": [] },
+    "ch_up":      { "protocol": "RC5", "decoded": { "value": "1020", "bits": 13 }, "raw": [] },
+    "ch_down":    { "protocol": "RC5", "decoded": { "value": "1021", "bits": 13 }, "raw": [] },
+    "input":      { "protocol": "RC5", "decoded": { "value": "1038", "bits": 13 }, "raw": [] },
+    "menu":       { "protocol": "RC5", "decoded": { "value": "1052", "bits": 13 }, "raw": [] },
+    "ok":         { "protocol": "RC5", "decoded": { "value": "1057", "bits": 13 }, "raw": [] },
+    "up":         { "protocol": "RC5", "decoded": { "value": "1050", "bits": 13 }, "raw": [] },
+    "down":       { "protocol": "RC5", "decoded": { "value": "1051", "bits": 13 }, "raw": [] },
+    "left":       { "protocol": "RC5", "decoded": { "value": "1055", "bits": 13 }, "raw": [] },
+    "right":      { "protocol": "RC5", "decoded": { "value": "1056", "bits": 13 }, "raw": [] },
+    "back":       { "protocol": "RC5", "decoded": { "value": "1058", "bits": 13 }, "raw": [] }
+  }
+}

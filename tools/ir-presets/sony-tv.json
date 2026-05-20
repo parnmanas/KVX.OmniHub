@@ -1,0 +1,40 @@
+{
+  "brand": "Sony",
+  "device": "TV",
+  "notes": [
+    "Sony SIRC 12-bit codes — used across Bravia and older WEGA TVs.",
+    "Sony also has 15-bit and 20-bit variants for some functions; 12-bit",
+    "covers the basics on virtually every Sony TV ever made.",
+    "Sony remotes are stateless — multiple presses are required for things",
+    "like channel numbers > 9 (the remote sends '1' then '2' for ch 12)."
+  ],
+  "carrier": 40000,
+  "commands": {
+    "power":      { "protocol": "SONY", "decoded": { "value": "A90", "bits": 12 }, "raw": [] },
+    "mute":       { "protocol": "SONY", "decoded": { "value": "290", "bits": 12 }, "raw": [] },
+    "vol_up":     { "protocol": "SONY", "decoded": { "value": "490", "bits": 12 }, "raw": [] },
+    "vol_down":   { "protocol": "SONY", "decoded": { "value": "C90", "bits": 12 }, "raw": [] },
+    "ch_up":      { "protocol": "SONY", "decoded": { "value": "090", "bits": 12 }, "raw": [] },
+    "ch_down":    { "protocol": "SONY", "decoded": { "value": "890", "bits": 12 }, "raw": [] },
+    "input":      { "protocol": "SONY", "decoded": { "value": "A50", "bits": 12 }, "raw": [] },
+    "menu":       { "protocol": "SONY", "decoded": { "value": "070", "bits": 12 }, "raw": [] },
+    "home":       { "protocol": "SONY", "decoded": { "value": "740", "bits": 12 }, "raw": [] },
+    "ok":         { "protocol": "SONY", "decoded": { "value": "A70", "bits": 12 }, "raw": [] },
+    "up":         { "protocol": "SONY", "decoded": { "value": "2F0", "bits": 12 }, "raw": [] },
+    "down":       { "protocol": "SONY", "decoded": { "value": "AF0", "bits": 12 }, "raw": [] },
+    "left":       { "protocol": "SONY", "decoded": { "value": "2D0", "bits": 12 }, "raw": [] },
+    "right":      { "protocol": "SONY", "decoded": { "value": "CD0", "bits": 12 }, "raw": [] },
+    "back":       { "protocol": "SONY", "decoded": { "value": "C23", "bits": 12 }, "raw": [] },
+    "exit":       { "protocol": "SONY", "decoded": { "value": "823", "bits": 12 }, "raw": [] },
+    "num_0":      { "protocol": "SONY", "decoded": { "value": "910", "bits": 12 }, "raw": [] },
+    "num_1":      { "protocol": "SONY", "decoded": { "value": "010", "bits": 12 }, "raw": [] },
+    "num_2":      { "protocol": "SONY", "decoded": { "value": "810", "bits": 12 }, "raw": [] },
+    "num_3":      { "protocol": "SONY", "decoded": { "value": "410", "bits": 12 }, "raw": [] },
+    "num_4":      { "protocol": "SONY", "decoded": { "value": "C10", "bits": 12 }, "raw": [] },
+    "num_5":      { "protocol": "SONY", "decoded": { "value": "210", "bits": 12 }, "raw": [] },
+    "num_6":      { "protocol": "SONY", "decoded": { "value": "A10", "bits": 12 }, "raw": [] },
+    "num_7":      { "protocol": "SONY", "decoded": { "value": "610", "bits": 12 }, "raw": [] },
+    "num_8":      { "protocol": "SONY", "decoded": { "value": "E10", "bits": 12 }, "raw": [] },
+    "num_9":      { "protocol": "SONY", "decoded": { "value": "110", "bits": 12 }, "raw": [] }
+  }
+}

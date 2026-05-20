@@ -7,10 +7,12 @@ import { Label } from "@/components/ui/label";
 import { Modal } from "@/components/ui/modal";
 import { Select } from "@/components/ui/select";
 import {
+  useCreateEquipmentFromPreset,
   useDeleteEquipment,
   useEquipments,
 } from "@/features/equipments/use-equipments";
 import { useOmnihubs } from "@/features/omnihubs/use-omnihubs";
+import { usePresets } from "@/features/presets/use-presets";
 import {
   useStore,
   useUpdateStore,
@@ -192,9 +194,16 @@ function AddEquipmentModal({
   open: boolean;
   onClose: () => void;
 }) {
+  // Two source modes for a new equipment:
+  //   - "preset": pick from baked-in IRDB-style presets (lg-tv, samsung-tv, …)
+  //   - "template": pick from user-created templates (existing flow)
+  const [mode, setMode] = useState<"preset" | "template">("preset");
+  const presets = usePresets();
   const templates = useTemplates();
   const omnihubs = useOmnihubs();
+  const fromPreset = useCreateEquipmentFromPreset();
   const instantiate = useInstantiateTemplate();
+  const [presetName, setPresetName] = useState<string>("");
   const [templateId, setTemplateId] = useState<string>("");
   const [name, setName] = useState("");
   const [omnihubId, setOmnihubId] = useState<string>("");
@@ -209,86 +218,176 @@ function AddEquipmentModal({
   );
 
   const selectedTemplate = templates.data?.find((t) => t.id === templateId);
+  const selectedPreset = presets.data?.find((p) => p.name === presetName);
+
+  function reset() {
+    setPresetName("");
+    setTemplateId("");
+    setName("");
+    setOmnihubId("");
+    setError(null);
+  }
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
-    if (!templateId) {
-      setError("템플릿을 선택하세요.");
-      return;
-    }
     try {
-      await instantiate.mutateAsync({
-        templateId,
-        input: {
+      if (mode === "preset") {
+        if (!presetName) {
+          setError("프리셋을 선택하세요.");
+          return;
+        }
+        await fromPreset.mutateAsync({
           storeId,
-          name,
+          preset: presetName,
+          name: name.trim() || undefined,
           omnihubId: omnihubId || undefined,
-        },
-      });
-      setTemplateId("");
-      setName("");
-      setOmnihubId("");
+        });
+      } else {
+        if (!templateId) {
+          setError("템플릿을 선택하세요.");
+          return;
+        }
+        await instantiate.mutateAsync({
+          templateId,
+          input: {
+            storeId,
+            name,
+            omnihubId: omnihubId || undefined,
+          },
+        });
+      }
+      reset();
       onClose();
     } catch (err) {
       setError(`등록 실패: ${(err as Error).message}`);
     }
   }
 
+  const submitting = fromPreset.isPending || instantiate.isPending;
+
   return (
     <Modal
       open={open}
       onClose={onClose}
       title="장비 추가"
-      description="장비 관리에 등록된 템플릿을 골라 매장에 배치합니다."
+      description="알려진 기기는 프리셋 한 번 클릭으로, 직접 만든 템플릿이 있으면 그쪽에서 골라 추가합니다."
+      className="max-w-xl"
     >
       <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="space-y-2">
-          <Label>장비 템플릿</Label>
-          <Select
-            value={templateId}
-            onChange={(e) => {
-              setTemplateId(e.target.value);
-              const t = templates.data?.find((tt) => tt.id === e.target.value);
-              if (t && !name) setName(t.name);
+        {/* Mode toggle */}
+        <div className="inline-flex rounded-md border border-border p-0.5 text-sm">
+          <button
+            type="button"
+            onClick={() => {
+              setMode("preset");
+              setError(null);
             }}
-            required
+            className={`rounded px-3 py-1.5 ${
+              mode === "preset"
+                ? "bg-primary text-primary-foreground"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
           >
-            <option value="">선택…</option>
-            {templates.data?.map((t) => (
-              <option key={t.id} value={t.id}>
-                [{TYPE_LABELS[t.type] ?? t.type}] {t.name} ({t.manufacturer}{" "}
-                {t.model})
-              </option>
-            ))}
-          </Select>
-          {templates.data && templates.data.length === 0 && (
-            <p className="text-xs text-muted-foreground">
-              등록된 템플릿이 없어요.{" "}
-              <Link
-                to="/templates"
-                className="text-foreground underline"
-              >
-                장비 관리에서 먼저 추가하세요
-              </Link>
-              .
-            </p>
-          )}
-          {selectedTemplate && (
-            <p className="text-xs text-muted-foreground">
-              이 템플릿의 기능 {selectedTemplate.functions?.length ?? 0}개가 그대로 복제됩니다.
-            </p>
-          )}
+            프리셋에서 시작
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setMode("template");
+              setError(null);
+            }}
+            className={`rounded px-3 py-1.5 ${
+              mode === "template"
+                ? "bg-primary text-primary-foreground"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            내 템플릿에서
+          </button>
         </div>
+
+        {mode === "preset" ? (
+          <div className="space-y-2">
+            <Label>프리셋</Label>
+            <Select
+              value={presetName}
+              onChange={(e) => {
+                setPresetName(e.target.value);
+                const p = presets.data?.find((pp) => pp.name === e.target.value);
+                if (p && !name) setName(`${p.brand} ${p.device}`);
+              }}
+              required
+            >
+              <option value="">선택…</option>
+              {presets.data?.map((p) => (
+                <option key={p.name} value={p.name}>
+                  [{TYPE_LABELS[p.device] ?? p.device}] {p.brand} ({p.commandCount}개 명령)
+                </option>
+              ))}
+            </Select>
+            {presets.data && presets.data.length === 0 && (
+              <p className="text-xs text-muted-foreground">
+                사용 가능한 프리셋이 없어요. tools/ir-presets/ 를 확인하세요.
+              </p>
+            )}
+            {selectedPreset && (
+              <p className="text-xs text-muted-foreground">
+                {selectedPreset.commandCount}개 기능이 자동으로 함께 생성됩니다.
+              </p>
+            )}
+          </div>
+        ) : (
+          <div className="space-y-2">
+            <Label>장비 템플릿</Label>
+            <Select
+              value={templateId}
+              onChange={(e) => {
+                setTemplateId(e.target.value);
+                const t = templates.data?.find((tt) => tt.id === e.target.value);
+                if (t && !name) setName(t.name);
+              }}
+              required
+            >
+              <option value="">선택…</option>
+              {templates.data?.map((t) => (
+                <option key={t.id} value={t.id}>
+                  [{TYPE_LABELS[t.type] ?? t.type}] {t.name} ({t.manufacturer} {t.model})
+                </option>
+              ))}
+            </Select>
+            {templates.data && templates.data.length === 0 && (
+              <p className="text-xs text-muted-foreground">
+                등록된 템플릿이 없어요.{" "}
+                <Link to="/templates" className="text-foreground underline">
+                  장비 관리에서 먼저 추가
+                </Link>
+                하거나 위의 "프리셋에서 시작"을 사용하세요.
+              </p>
+            )}
+            {selectedTemplate && (
+              <p className="text-xs text-muted-foreground">
+                이 템플릿의 기능 {selectedTemplate.functions?.length ?? 0}개가 그대로 복제됩니다.
+              </p>
+            )}
+          </div>
+        )}
+
         <div className="space-y-2">
           <Label>이 매장에서 부를 이름</Label>
           <Input
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="예: 메인 룸 에어컨"
-            required
+            placeholder="예: 메인 룸 TV"
+            required={mode === "template"}
           />
+          {mode === "preset" && (
+            <p className="text-xs text-muted-foreground">
+              비워두면 "{selectedPreset ? `${selectedPreset.brand} ${selectedPreset.device}` : "(브랜드명) (기기)"}"로 저장됩니다.
+            </p>
+          )}
         </div>
+
         <div className="space-y-2">
           <Label>OmniHub 할당 (선택)</Label>
           <Select
@@ -319,9 +418,13 @@ function AddEquipmentModal({
           </Button>
           <Button
             type="submit"
-            disabled={instantiate.isPending || !templates.data?.length}
+            disabled={
+              submitting ||
+              (mode === "preset" && !presets.data?.length) ||
+              (mode === "template" && !templates.data?.length)
+            }
           >
-            {instantiate.isPending ? "등록 중…" : "추가"}
+            {submitting ? "등록 중…" : "추가"}
           </Button>
         </div>
       </form>

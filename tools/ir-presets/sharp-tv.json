@@ -1,0 +1,27 @@
+{
+  "brand": "Sharp",
+  "device": "TV",
+  "notes": [
+    "Sharp uses its own 15-bit protocol (SHARP) — needs sendSharp().",
+    "Codes shown are address+command|0x100 form. Library compiles raw timing",
+    "from these on send.",
+    "Sharp Aquos remotes typically share these codes back to mid-2000s."
+  ],
+  "carrier": 38000,
+  "commands": {
+    "power":      { "protocol": "SHARP", "decoded": { "value": "41A2", "bits": 15 }, "raw": [] },
+    "mute":       { "protocol": "SHARP", "decoded": { "value": "4192", "bits": 15 }, "raw": [] },
+    "vol_up":     { "protocol": "SHARP", "decoded": { "value": "4122", "bits": 15 }, "raw": [] },
+    "vol_down":   { "protocol": "SHARP", "decoded": { "value": "41A2", "bits": 15 }, "raw": [] },
+    "ch_up":      { "protocol": "SHARP", "decoded": { "value": "4102", "bits": 15 }, "raw": [] },
+    "ch_down":    { "protocol": "SHARP", "decoded": { "value": "4182", "bits": 15 }, "raw": [] },
+    "input":      { "protocol": "SHARP", "decoded": { "value": "41C2", "bits": 15 }, "raw": [] },
+    "menu":       { "protocol": "SHARP", "decoded": { "value": "4202", "bits": 15 }, "raw": [] },
+    "ok":         { "protocol": "SHARP", "decoded": { "value": "428A", "bits": 15 }, "raw": [] },
+    "up":         { "protocol": "SHARP", "decoded": { "value": "424A", "bits": 15 }, "raw": [] },
+    "down":       { "protocol": "SHARP", "decoded": { "value": "42CA", "bits": 15 }, "raw": [] },
+    "left":       { "protocol": "SHARP", "decoded": { "value": "422A", "bits": 15 }, "raw": [] },
+    "right":      { "protocol": "SHARP", "decoded": { "value": "42AA", "bits": 15 }, "raw": [] },
+    "back":       { "protocol": "SHARP", "decoded": { "value": "4242", "bits": 15 }, "raw": [] }
+  }
+}

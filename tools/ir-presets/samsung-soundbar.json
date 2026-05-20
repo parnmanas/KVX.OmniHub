@@ -1,0 +1,21 @@
+{
+  "brand": "Samsung",
+  "device": "OTHER",
+  "notes": [
+    "Samsung HW-series soundbars use the same 0xE0E0 NEC family as Samsung",
+    "TVs. Source select cycles HDMI/Optical/AUX/Bluetooth/USB.",
+    "device=OTHER because the schema doesn't yet have a SOUNDBAR type."
+  ],
+  "carrier": 38000,
+  "commands": {
+    "power":      { "protocol": "SAMSUNG", "decoded": { "value": "E0E040BF", "bits": 32 }, "raw": [] },
+    "mute":       { "protocol": "SAMSUNG", "decoded": { "value": "E0E0F00F", "bits": 32 }, "raw": [] },
+    "vol_up":     { "protocol": "SAMSUNG", "decoded": { "value": "E0E0E01F", "bits": 32 }, "raw": [] },
+    "vol_down":   { "protocol": "SAMSUNG", "decoded": { "value": "E0E0D02F", "bits": 32 }, "raw": [] },
+    "source":     { "protocol": "SAMSUNG", "decoded": { "value": "E0E0F807", "bits": 32 }, "raw": [] },
+    "bluetooth":  { "protocol": "SAMSUNG", "decoded": { "value": "E0E0FE01", "bits": 32 }, "raw": [] },
+    "sound_mode": { "protocol": "SAMSUNG", "decoded": { "value": "E0E000FF", "bits": 32 }, "raw": [] },
+    "bass_up":    { "protocol": "SAMSUNG", "decoded": { "value": "E0E0D52A", "bits": 32 }, "raw": [] },
+    "bass_down":  { "protocol": "SAMSUNG", "decoded": { "value": "E0E0E51A", "bits": 32 }, "raw": [] }
+  }
+}

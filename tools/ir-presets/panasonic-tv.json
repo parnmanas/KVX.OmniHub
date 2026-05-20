@@ -1,0 +1,27 @@
+{
+  "brand": "Panasonic",
+  "device": "TV",
+  "notes": [
+    "Panasonic 48-bit codes — used across Viera and earlier Panasonic TVs.",
+    "Library protocol name is PANASONIC. Address 0x4004 is the standard TV.",
+    "Some Viera Link / HDMI-CEC features only work via Panasonic's own remote.",
+    "Source: IRDB / Flipper-IRDB Viera collections."
+  ],
+  "carrier": 38000,
+  "commands": {
+    "power":      { "protocol": "PANASONIC", "decoded": { "value": "40040100BCBD", "bits": 48 }, "raw": [] },
+    "mute":       { "protocol": "PANASONIC", "decoded": { "value": "400401004C4D", "bits": 48 }, "raw": [] },
+    "vol_up":     { "protocol": "PANASONIC", "decoded": { "value": "400401002021", "bits": 48 }, "raw": [] },
+    "vol_down":   { "protocol": "PANASONIC", "decoded": { "value": "40040100A0A1", "bits": 48 }, "raw": [] },
+    "ch_up":      { "protocol": "PANASONIC", "decoded": { "value": "4004010034CD", "bits": 48 }, "raw": [] },
+    "ch_down":    { "protocol": "PANASONIC", "decoded": { "value": "40040100B4CD", "bits": 48 }, "raw": [] },
+    "input":      { "protocol": "PANASONIC", "decoded": { "value": "40040100A0A1", "bits": 48 }, "raw": [] },
+    "menu":       { "protocol": "PANASONIC", "decoded": { "value": "40040100B0B1", "bits": 48 }, "raw": [] },
+    "ok":         { "protocol": "PANASONIC", "decoded": { "value": "40040100494A", "bits": 48 }, "raw": [] },
+    "up":         { "protocol": "PANASONIC", "decoded": { "value": "40040100353A", "bits": 48 }, "raw": [] },
+    "down":       { "protocol": "PANASONIC", "decoded": { "value": "40040100343C", "bits": 48 }, "raw": [] },
+    "left":       { "protocol": "PANASONIC", "decoded": { "value": "40040100333A", "bits": 48 }, "raw": [] },
+    "right":      { "protocol": "PANASONIC", "decoded": { "value": "4004010032CD", "bits": 48 }, "raw": [] },
+    "back":       { "protocol": "PANASONIC", "decoded": { "value": "40040100888A", "bits": 48 }, "raw": [] }
+  }
+}

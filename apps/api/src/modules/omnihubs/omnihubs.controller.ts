@@ -17,6 +17,7 @@ import { DeviceRegistry } from "../../gateways/device-registry.service";
 import { OmnihubGateway } from "../../gateways/omnihub.gateway";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { CreateOmnihubDto } from "./dto/create-omnihub.dto";
+import { IrTestDto } from "./dto/ir-test.dto";
 import { PairDto } from "./dto/pair.dto";
 import { UpdateOmnihubDto } from "./dto/update-omnihub.dto";
 import { OmnihubsService } from "./omnihubs.service";
@@ -111,5 +112,20 @@ export class OmnihubsController {
   @HttpCode(204)
   remove(@Param("id", ParseUUIDPipe) id: string): Promise<void> {
     return this.service.remove(id);
+  }
+
+  /**
+   * Diagnostic: forward an IR payload to a paired device without going through
+   * the equipment/function model. Lets operators verify hardware bring-up,
+   * test preset libraries, or repro a problematic capture before persisting
+   * it as a function. Returns 204 on device ack.
+   */
+  @Post(":id/ir-test")
+  @HttpCode(204)
+  async irTest(
+    @Param("id", ParseUUIDPipe) id: string,
+    @Body() dto: IrTestDto,
+  ): Promise<void> {
+    await this.gateway.requestIrSend(id, dto.payload, dto.repeat);
   }
 }

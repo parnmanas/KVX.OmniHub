@@ -1,0 +1,28 @@
+{
+  "brand": "TCL",
+  "device": "TV",
+  "notes": [
+    "TCL NEC 32-bit, address 0x57E3 for most Roku TV / Google TV models.",
+    "TCL Android TV (P-series, C-series) sold in Korea use the same codes.",
+    "For TCL Roku-OS TVs, the Roku-specific function keys (search/instant",
+    "replay) are not in this preset — only standard TV controls."
+  ],
+  "carrier": 38000,
+  "commands": {
+    "power":      { "protocol": "NEC", "decoded": { "value": "57E3E817", "bits": 32 }, "raw": [] },
+    "mute":       { "protocol": "NEC", "decoded": { "value": "57E318E7", "bits": 32 }, "raw": [] },
+    "vol_up":     { "protocol": "NEC", "decoded": { "value": "57E308F7", "bits": 32 }, "raw": [] },
+    "vol_down":   { "protocol": "NEC", "decoded": { "value": "57E348B7", "bits": 32 }, "raw": [] },
+    "ch_up":      { "protocol": "NEC", "decoded": { "value": "57E32AD5", "bits": 32 }, "raw": [] },
+    "ch_down":    { "protocol": "NEC", "decoded": { "value": "57E3CA35", "bits": 32 }, "raw": [] },
+    "input":      { "protocol": "NEC", "decoded": { "value": "57E3E11E", "bits": 32 }, "raw": [] },
+    "menu":       { "protocol": "NEC", "decoded": { "value": "57E3F00F", "bits": 32 }, "raw": [] },
+    "home":       { "protocol": "NEC", "decoded": { "value": "57E37C83", "bits": 32 }, "raw": [] },
+    "ok":         { "protocol": "NEC", "decoded": { "value": "57E332CD", "bits": 32 }, "raw": [] },
+    "up":         { "protocol": "NEC", "decoded": { "value": "57E302FD", "bits": 32 }, "raw": [] },
+    "down":       { "protocol": "NEC", "decoded": { "value": "57E382FD", "bits": 32 }, "raw": [] },
+    "left":       { "protocol": "NEC", "decoded": { "value": "57E322DD", "bits": 32 }, "raw": [] },
+    "right":      { "protocol": "NEC", "decoded": { "value": "57E3C23D", "bits": 32 }, "raw": [] },
+    "back":       { "protocol": "NEC", "decoded": { "value": "57E3926D", "bits": 32 }, "raw": [] }
+  }
+}

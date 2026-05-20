@@ -1,4 +1,4 @@
-import type { IrPayload, IrProtocol } from "./equipment.js";
+import type { IrPayload, IrProtocol, RelayPayload } from "./equipment.js";
 
 // ============================================================================
 // OmniHub <-> Server WebSocket protocol
@@ -77,6 +77,12 @@ export interface IrSendRequest {
   repeat?: number;
 }
 
+export interface RelaySetRequest {
+  type: "relay_set";
+  requestId: string;
+  payload: RelayPayload;
+}
+
 export interface ErrorMessage {
   type: "error";
   requestId?: string;
@@ -90,6 +96,7 @@ export type ServerToDeviceMessage =
   | PingMessage
   | IrLearnRequest
   | IrSendRequest
+  | RelaySetRequest
   | ErrorMessage;
 
 // ---------- Constants ----------

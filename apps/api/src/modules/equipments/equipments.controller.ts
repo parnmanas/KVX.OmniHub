@@ -14,6 +14,7 @@ import {
 import { Equipment, EquipmentFunction } from "../../entities";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { CreateEquipmentDto } from "./dto/create-equipment.dto";
+import { FromPresetDto } from "./dto/from-preset.dto";
 import { UpdateEquipmentDto } from "./dto/update-equipment.dto";
 import {
   CreateFunctionDto,
@@ -41,6 +42,12 @@ export class EquipmentsController {
   @Post("equipments")
   create(@Body() dto: CreateEquipmentDto): Promise<Equipment> {
     return this.service.create(dto);
+  }
+
+  /** Create equipment + all IR functions from a named preset, one shot. */
+  @Post("equipments/from-preset")
+  createFromPreset(@Body() dto: FromPresetDto): Promise<Equipment> {
+    return this.service.createFromPreset(dto);
   }
 
   @Patch("equipments/:id")

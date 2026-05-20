@@ -1,0 +1,22 @@
+{
+  "brand": "LG",
+  "device": "OTHER",
+  "notes": [
+    "LG SN-series and SK-series soundbars. Codes also work for many older",
+    "LG home theater systems (LAS/LAB/LH).",
+    "device=OTHER because the schema doesn't yet have a SOUNDBAR type."
+  ],
+  "carrier": 38000,
+  "commands": {
+    "power":      { "protocol": "NEC", "decoded": { "value": "BF40FF00", "bits": 32 }, "raw": [] },
+    "mute":       { "protocol": "NEC", "decoded": { "value": "BF40DF20", "bits": 32 }, "raw": [] },
+    "vol_up":     { "protocol": "NEC", "decoded": { "value": "BF407F80", "bits": 32 }, "raw": [] },
+    "vol_down":   { "protocol": "NEC", "decoded": { "value": "BF40BF40", "bits": 32 }, "raw": [] },
+    "source":     { "protocol": "NEC", "decoded": { "value": "BF40BD42", "bits": 32 }, "raw": [] },
+    "bluetooth":  { "protocol": "NEC", "decoded": { "value": "BF40A35C", "bits": 32 }, "raw": [] },
+    "sound_mode": { "protocol": "NEC", "decoded": { "value": "BF40CB34", "bits": 32 }, "raw": [] },
+    "bass_up":    { "protocol": "NEC", "decoded": { "value": "BF4053AC", "bits": 32 }, "raw": [] },
+    "bass_down":  { "protocol": "NEC", "decoded": { "value": "BF40D32C", "bits": 32 }, "raw": [] },
+    "play_pause": { "protocol": "NEC", "decoded": { "value": "BF40E11E", "bits": 32 }, "raw": [] }
+  }
+}

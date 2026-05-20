@@ -1,0 +1,26 @@
+{
+  "brand": "LG",
+  "device": "PROJECTOR",
+  "notes": [
+    "LG NEC 32-bit, same 0x20DF address family as LG TVs (Minibeam,",
+    "CineBeam, HU series). Many LG TV codes also work on LG projectors."
+  ],
+  "carrier": 38000,
+  "commands": {
+    "power":      { "protocol": "NEC", "decoded": { "value": "20DF10EF", "bits": 32 }, "raw": [] },
+    "input":      { "protocol": "NEC", "decoded": { "value": "20DFD02F", "bits": 32 }, "raw": [] },
+    "menu":       { "protocol": "NEC", "decoded": { "value": "20DFC23D", "bits": 32 }, "raw": [] },
+    "ok":         { "protocol": "NEC", "decoded": { "value": "20DF22DD", "bits": 32 }, "raw": [] },
+    "up":         { "protocol": "NEC", "decoded": { "value": "20DF02FD", "bits": 32 }, "raw": [] },
+    "down":       { "protocol": "NEC", "decoded": { "value": "20DF827D", "bits": 32 }, "raw": [] },
+    "left":       { "protocol": "NEC", "decoded": { "value": "20DFE01F", "bits": 32 }, "raw": [] },
+    "right":      { "protocol": "NEC", "decoded": { "value": "20DF609F", "bits": 32 }, "raw": [] },
+    "back":       { "protocol": "NEC", "decoded": { "value": "20DF14EB", "bits": 32 }, "raw": [] },
+    "exit":       { "protocol": "NEC", "decoded": { "value": "20DFDA25", "bits": 32 }, "raw": [] },
+    "vol_up":     { "protocol": "NEC", "decoded": { "value": "20DF40BF", "bits": 32 }, "raw": [] },
+    "vol_down":   { "protocol": "NEC", "decoded": { "value": "20DFC03F", "bits": 32 }, "raw": [] },
+    "mute":       { "protocol": "NEC", "decoded": { "value": "20DF906F", "bits": 32 }, "raw": [] },
+    "freeze":     { "protocol": "NEC", "decoded": { "value": "20DFA25D", "bits": 32 }, "raw": [] },
+    "blank":      { "protocol": "NEC", "decoded": { "value": "20DF807F", "bits": 32 }, "raw": [] }
+  }
+}

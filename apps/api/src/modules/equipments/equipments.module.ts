@@ -8,6 +8,7 @@ import {
   Store,
 } from "../../entities";
 import { GatewaysModule } from "../../gateways/gateways.module";
+import { PresetsModule } from "../presets/presets.module";
 import { EquipmentsController } from "./equipments.controller";
 import { EquipmentsService } from "./equipments.service";
 
@@ -21,6 +22,7 @@ import { EquipmentsService } from "./equipments.service";
       Store,
     ]),
     GatewaysModule,
+    PresetsModule,
   ],
   controllers: [EquipmentsController],
   providers: [EquipmentsService],

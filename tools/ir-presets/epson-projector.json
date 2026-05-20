@@ -1,0 +1,25 @@
+{
+  "brand": "Epson",
+  "device": "PROJECTOR",
+  "notes": [
+    "Epson NEC 32-bit, address 0xC1AA for EB-/EH-/Home Cinema series.",
+    "Discrete power_on/power_off codes — typical of business/installation",
+    "projectors that need automation-safe operation."
+  ],
+  "carrier": 38000,
+  "commands": {
+    "power_on":   { "protocol": "NEC", "decoded": { "value": "C1AA09F6", "bits": 32 }, "raw": [] },
+    "power_off":  { "protocol": "NEC", "decoded": { "value": "C1AA98F6", "bits": 32 }, "raw": [] },
+    "power":      { "protocol": "NEC", "decoded": { "value": "C1AA8877", "bits": 32 }, "raw": [] },
+    "input":      { "protocol": "NEC", "decoded": { "value": "C1AA48B7", "bits": 32 }, "raw": [] },
+    "menu":       { "protocol": "NEC", "decoded": { "value": "C1AA908F", "bits": 32 }, "raw": [] },
+    "ok":         { "protocol": "NEC", "decoded": { "value": "C1AA10EF", "bits": 32 }, "raw": [] },
+    "up":         { "protocol": "NEC", "decoded": { "value": "C1AA50AF", "bits": 32 }, "raw": [] },
+    "down":       { "protocol": "NEC", "decoded": { "value": "C1AAD02F", "bits": 32 }, "raw": [] },
+    "left":       { "protocol": "NEC", "decoded": { "value": "C1AA30CF", "bits": 32 }, "raw": [] },
+    "right":      { "protocol": "NEC", "decoded": { "value": "C1AAB04F", "bits": 32 }, "raw": [] },
+    "back":       { "protocol": "NEC", "decoded": { "value": "C1AA1AE5", "bits": 32 }, "raw": [] },
+    "freeze":     { "protocol": "NEC", "decoded": { "value": "C1AAA05F", "bits": 32 }, "raw": [] },
+    "mute":       { "protocol": "NEC", "decoded": { "value": "C1AA708F", "bits": 32 }, "raw": [] }
+  }
+}

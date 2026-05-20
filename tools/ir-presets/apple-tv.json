@@ -1,0 +1,21 @@
+{
+  "brand": "Apple",
+  "device": "TV",
+  "notes": [
+    "Apple Remote (NEC 32-bit, 38kHz). Works with Apple TV 1st-4th gen.",
+    "Apple TV HD (4K) and newer ship with Siri Remote which uses Bluetooth",
+    "primarily, but the IR receiver still accepts these legacy codes.",
+    "Address byte 0x77E1 is the Apple Remote universal device address."
+  ],
+  "carrier": 38000,
+  "commands": {
+    "up":         { "protocol": "NEC", "decoded": { "value": "77E1D0F0", "bits": 32 }, "raw": [] },
+    "down":       { "protocol": "NEC", "decoded": { "value": "77E1B0F0", "bits": 32 }, "raw": [] },
+    "left":       { "protocol": "NEC", "decoded": { "value": "77E110F0", "bits": 32 }, "raw": [] },
+    "right":      { "protocol": "NEC", "decoded": { "value": "77E1E0F0", "bits": 32 }, "raw": [] },
+    "select":     { "protocol": "NEC", "decoded": { "value": "77E1BAF0", "bits": 32 }, "raw": [] },
+    "menu":       { "protocol": "NEC", "decoded": { "value": "77E140F0", "bits": 32 }, "raw": [] },
+    "play_pause": { "protocol": "NEC", "decoded": { "value": "77E17A38", "bits": 32 }, "raw": [] },
+    "hold_select":{ "protocol": "NEC", "decoded": { "value": "77E1A8F0", "bits": 32 }, "raw": [] }
+  }
+}

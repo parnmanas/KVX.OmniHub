@@ -1,0 +1,27 @@
+{
+  "brand": "BenQ",
+  "device": "PROJECTOR",
+  "notes": [
+    "BenQ NEC 32-bit, address 0x9866 for most W/MH/MS series projectors.",
+    "Many BenQ business projectors also accept these codes.",
+    "power_on/power_off are discrete codes — safer than power-toggle in",
+    "automated scenarios where you don't know current state."
+  ],
+  "carrier": 38000,
+  "commands": {
+    "power_on":   { "protocol": "NEC", "decoded": { "value": "9866807F", "bits": 32 }, "raw": [] },
+    "power_off":  { "protocol": "NEC", "decoded": { "value": "986640BF", "bits": 32 }, "raw": [] },
+    "power":      { "protocol": "NEC", "decoded": { "value": "986600FF", "bits": 32 }, "raw": [] },
+    "input":      { "protocol": "NEC", "decoded": { "value": "9866C03F", "bits": 32 }, "raw": [] },
+    "menu":       { "protocol": "NEC", "decoded": { "value": "9866D02F", "bits": 32 }, "raw": [] },
+    "ok":         { "protocol": "NEC", "decoded": { "value": "9866F807", "bits": 32 }, "raw": [] },
+    "up":         { "protocol": "NEC", "decoded": { "value": "986650AF", "bits": 32 }, "raw": [] },
+    "down":       { "protocol": "NEC", "decoded": { "value": "986658A7", "bits": 32 }, "raw": [] },
+    "left":       { "protocol": "NEC", "decoded": { "value": "9866D827", "bits": 32 }, "raw": [] },
+    "right":      { "protocol": "NEC", "decoded": { "value": "98661AE5", "bits": 32 }, "raw": [] },
+    "back":       { "protocol": "NEC", "decoded": { "value": "98669867", "bits": 32 }, "raw": [] },
+    "vol_up":     { "protocol": "NEC", "decoded": { "value": "9866A05F", "bits": 32 }, "raw": [] },
+    "vol_down":   { "protocol": "NEC", "decoded": { "value": "986620DF", "bits": 32 }, "raw": [] },
+    "mute":       { "protocol": "NEC", "decoded": { "value": "9866F00F", "bits": 32 }, "raw": [] }
+  }
+}

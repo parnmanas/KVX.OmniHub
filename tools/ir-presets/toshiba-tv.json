@@ -1,0 +1,25 @@
+{
+  "brand": "Toshiba",
+  "device": "TV",
+  "notes": [
+    "Toshiba NEC 32-bit, address 0x40BF for Regza and most CRT/LCD models.",
+    "Toshiba-branded TVs sold as Fire TV (2018+) use Fire TV codes, not these."
+  ],
+  "carrier": 38000,
+  "commands": {
+    "power":      { "protocol": "NEC", "decoded": { "value": "40BF12ED", "bits": 32 }, "raw": [] },
+    "mute":       { "protocol": "NEC", "decoded": { "value": "40BF7887", "bits": 32 }, "raw": [] },
+    "vol_up":     { "protocol": "NEC", "decoded": { "value": "40BF58A7", "bits": 32 }, "raw": [] },
+    "vol_down":   { "protocol": "NEC", "decoded": { "value": "40BFD827", "bits": 32 }, "raw": [] },
+    "ch_up":      { "protocol": "NEC", "decoded": { "value": "40BF38C7", "bits": 32 }, "raw": [] },
+    "ch_down":    { "protocol": "NEC", "decoded": { "value": "40BFB847", "bits": 32 }, "raw": [] },
+    "input":      { "protocol": "NEC", "decoded": { "value": "40BF8877", "bits": 32 }, "raw": [] },
+    "menu":       { "protocol": "NEC", "decoded": { "value": "40BFC03F", "bits": 32 }, "raw": [] },
+    "ok":         { "protocol": "NEC", "decoded": { "value": "40BFD22D", "bits": 32 }, "raw": [] },
+    "up":         { "protocol": "NEC", "decoded": { "value": "40BF02FD", "bits": 32 }, "raw": [] },
+    "down":       { "protocol": "NEC", "decoded": { "value": "40BFA25D", "bits": 32 }, "raw": [] },
+    "left":       { "protocol": "NEC", "decoded": { "value": "40BFE21D", "bits": 32 }, "raw": [] },
+    "right":      { "protocol": "NEC", "decoded": { "value": "40BF629D", "bits": 32 }, "raw": [] },
+    "back":       { "protocol": "NEC", "decoded": { "value": "40BFB04F", "bits": 32 }, "raw": [] }
+  }
+}

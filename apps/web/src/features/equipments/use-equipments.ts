@@ -56,6 +56,31 @@ export function useCreateEquipment() {
   });
 }
 
+export interface CreateEquipmentFromPresetInput {
+  storeId: string;
+  preset: string;
+  name?: string;
+  omnihubId?: string;
+}
+
+export function useCreateEquipmentFromPreset() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: CreateEquipmentFromPresetInput) => {
+      const { data } = await api.post<Equipment>(
+        "/equipments/from-preset",
+        input,
+      );
+      return data;
+    },
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: equipmentsKeys.byStore(data.storeId) });
+      qc.invalidateQueries({ queryKey: storesKeys.detail(data.storeId) });
+      qc.invalidateQueries({ queryKey: omnihubsKeys.all });
+    },
+  });
+}
+
 export function useUpdateEquipment() {
   const qc = useQueryClient();
   return useMutation({

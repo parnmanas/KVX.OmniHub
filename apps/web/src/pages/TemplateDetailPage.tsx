@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { Link, useParams } from "react-router-dom";
 import { ControlType, type FunctionPayload } from "@omnihub/shared";
 import { Button } from "@/components/ui/button";
@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Modal } from "@/components/ui/modal";
 import { Select } from "@/components/ui/select";
+import { usePreset, usePresets } from "@/features/presets/use-presets";
 import {
   useCreateTemplateFunction,
   useDeleteTemplateFunction,
@@ -65,6 +66,7 @@ export default function TemplateDetailPage() {
   const updateTemplate = useUpdateTemplate();
   const deleteFunction = useDeleteTemplateFunction(id ?? "");
   const [addOpen, setAddOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   const [editingName, setEditingName] = useState<string | null>(null);
 
   if (!id) return null;
@@ -163,7 +165,12 @@ export default function TemplateDetailPage() {
       <section>
         <div className="mb-3 flex items-center justify-between">
           <h2 className="text-base font-semibold">기능</h2>
-          <Button onClick={() => setAddOpen(true)}>+ 기능 추가</Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => setImportOpen(true)}>
+              프리셋에서 가져오기
+            </Button>
+            <Button onClick={() => setAddOpen(true)}>+ 기능 추가</Button>
+          </div>
         </div>
 
         {fns.length === 0 ? (
@@ -205,6 +212,12 @@ export default function TemplateDetailPage() {
         templateId={tpl.id}
         open={addOpen}
         onClose={() => setAddOpen(false)}
+      />
+      <ImportPresetModal
+        templateId={tpl.id}
+        existingNames={new Set(fns.map((f) => f.name))}
+        open={importOpen}
+        onClose={() => setImportOpen(false)}
       />
     </div>
   );
@@ -629,6 +642,296 @@ function PayloadView({ payload }: { payload: FunctionPayload }) {
     <pre className="overflow-x-auto rounded bg-background p-3 text-xs">
       {JSON.stringify(payload, null, 2)}
     </pre>
+  );
+}
+
+function ImportPresetModal({
+  templateId,
+  existingNames,
+  open,
+  onClose,
+}: {
+  templateId: string;
+  existingNames: Set<string>;
+  open: boolean;
+  onClose: () => void;
+}) {
+  const presets = usePresets();
+  const [selectedPreset, setSelectedPreset] = useState<string>("");
+  const presetDetail = usePreset(selectedPreset || null);
+  const createFunction = useCreateTemplateFunction(templateId);
+
+  // Per-command selection (default: import everything not already present).
+  const [picked, setPicked] = useState<Record<string, boolean>>({});
+  const [progress, setProgress] = useState<{ done: number; total: number } | null>(
+    null,
+  );
+  const [errors, setErrors] = useState<string[]>([]);
+  const [overwrite, setOverwrite] = useState(false);
+
+  useEffect(() => {
+    if (open) {
+      setSelectedPreset("");
+      setPicked({});
+      setProgress(null);
+      setErrors([]);
+      setOverwrite(false);
+    }
+  }, [open]);
+
+  // When preset detail loads, default all commands to "selected" — but
+  // pre-deselect any whose name already exists in the template (avoids
+  // accidental duplicates).
+  useEffect(() => {
+    if (presetDetail.data) {
+      const next: Record<string, boolean> = {};
+      for (const cmd of Object.keys(presetDetail.data.commands)) {
+        next[cmd] = !existingNames.has(cmd);
+      }
+      setPicked(next);
+    }
+  }, [presetDetail.data, existingNames]);
+
+  const selectedCount = useMemo(
+    () => Object.values(picked).filter(Boolean).length,
+    [picked],
+  );
+  const totalCount = useMemo(
+    () =>
+      presetDetail.data
+        ? Object.keys(presetDetail.data.commands).length
+        : 0,
+    [presetDetail.data],
+  );
+
+  function toggleAll(value: boolean) {
+    if (!presetDetail.data) return;
+    const next: Record<string, boolean> = {};
+    for (const cmd of Object.keys(presetDetail.data.commands)) {
+      // When toggling all-off, allow overriding the duplicate guard.
+      next[cmd] = value;
+    }
+    setPicked(next);
+  }
+
+  async function handleImport() {
+    if (!presetDetail.data) return;
+    const toImport = Object.entries(picked).filter(([, v]) => v).map(([k]) => k);
+    if (toImport.length === 0) return;
+
+    setProgress({ done: 0, total: toImport.length });
+    setErrors([]);
+    const failed: string[] = [];
+    let done = 0;
+    // Compute starting order: append after last existing.
+    let nextOrder = existingNames.size;
+    for (const cmdName of toImport) {
+      const payload = presetDetail.data.commands[cmdName];
+      try {
+        if (existingNames.has(cmdName) && !overwrite) {
+          failed.push(`${cmdName}: 이미 존재 (덮어쓰기 미체크)`);
+          continue;
+        }
+        await createFunction.mutateAsync({
+          name: cmdName,
+          controlType: "IR",
+          payload: { controlType: "IR", data: payload },
+          order: nextOrder++,
+        });
+      } catch (err) {
+        failed.push(`${cmdName}: ${(err as Error).message}`);
+      } finally {
+        done++;
+        setProgress({ done, total: toImport.length });
+      }
+    }
+    setErrors(failed);
+    if (failed.length === 0) {
+      onClose();
+    }
+  }
+
+  const running = progress !== null && progress.done < progress.total;
+
+  return (
+    <Modal
+      open={open}
+      onClose={running ? () => {} : onClose}
+      title="프리셋에서 기능 가져오기"
+      description="알려진 기기의 IR 명령 모음을 한 번에 템플릿에 추가합니다."
+      className="max-w-2xl"
+    >
+      <div className="space-y-4">
+        <div className="space-y-2">
+          <Label>프리셋</Label>
+          <Select
+            value={selectedPreset}
+            onChange={(e) => setSelectedPreset(e.target.value)}
+            disabled={presets.isLoading || running}
+          >
+            <option value="">선택…</option>
+            {presets.data?.map((p) => (
+              <option key={p.name} value={p.name}>
+                {p.brand} {p.device} — {p.name} ({p.commandCount}개 명령)
+              </option>
+            ))}
+          </Select>
+          {presets.data && presets.data.length === 0 && (
+            <p className="text-xs text-muted-foreground">
+              사용 가능한 프리셋이 없어요. tools/ir-presets/ 디렉터리를 확인하세요.
+            </p>
+          )}
+        </div>
+
+        {presetDetail.isLoading && (
+          <p className="text-sm text-muted-foreground">프리셋 로드 중…</p>
+        )}
+
+        {presetDetail.data && (
+          <>
+            {presetDetail.data.notes && presetDetail.data.notes.length > 0 && (
+              <Card className="border-dashed border-border bg-muted/30 p-3 text-xs text-muted-foreground">
+                {presetDetail.data.notes.map((n, i) => (
+                  <p key={i}>{n}</p>
+                ))}
+              </Card>
+            )}
+
+            <div className="flex items-center justify-between">
+              <Label>
+                추가할 명령 ({selectedCount}/{totalCount})
+              </Label>
+              <div className="flex gap-2 text-xs">
+                <button
+                  type="button"
+                  className="text-muted-foreground hover:text-foreground"
+                  onClick={() => toggleAll(true)}
+                  disabled={running}
+                >
+                  모두 선택
+                </button>
+                <span className="text-muted-foreground">·</span>
+                <button
+                  type="button"
+                  className="text-muted-foreground hover:text-foreground"
+                  onClick={() => toggleAll(false)}
+                  disabled={running}
+                >
+                  모두 해제
+                </button>
+              </div>
+            </div>
+
+            <div className="max-h-72 overflow-y-auto rounded-md border border-border">
+              <table className="w-full text-sm">
+                <thead className="sticky top-0 bg-background">
+                  <tr className="border-b border-border text-left text-xs uppercase text-muted-foreground">
+                    <th className="w-10 px-3 py-2"></th>
+                    <th className="px-3 py-2">이름</th>
+                    <th className="px-3 py-2">프로토콜</th>
+                    <th className="px-3 py-2">값</th>
+                    <th className="w-20 px-3 py-2">상태</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {Object.entries(presetDetail.data.commands).map(
+                    ([cmdName, cmd]) => {
+                      const exists = existingNames.has(cmdName);
+                      return (
+                        <tr
+                          key={cmdName}
+                          className="border-b border-border last:border-0"
+                        >
+                          <td className="px-3 py-2">
+                            <input
+                              type="checkbox"
+                              checked={picked[cmdName] ?? false}
+                              onChange={(e) =>
+                                setPicked((prev) => ({
+                                  ...prev,
+                                  [cmdName]: e.target.checked,
+                                }))
+                              }
+                              disabled={running}
+                            />
+                          </td>
+                          <td className="px-3 py-2 font-medium">{cmdName}</td>
+                          <td className="px-3 py-2 font-mono text-xs">
+                            {cmd.protocol}
+                          </td>
+                          <td className="px-3 py-2 font-mono text-xs text-muted-foreground">
+                            {cmd.decoded
+                              ? `${cmd.decoded.value} (${cmd.decoded.bits}b)`
+                              : `raw[${cmd.raw.length}]`}
+                          </td>
+                          <td className="px-3 py-2 text-xs">
+                            {exists ? (
+                              <span className="text-amber-600">중복</span>
+                            ) : (
+                              <span className="text-muted-foreground">신규</span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    },
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            <label className="flex items-center gap-2 text-xs text-muted-foreground">
+              <input
+                type="checkbox"
+                checked={overwrite}
+                onChange={(e) => setOverwrite(e.target.checked)}
+                disabled={running}
+              />
+              같은 이름의 기능이 있어도 추가 (서버는 중복 이름을 허용함 — 정리는 수동)
+            </label>
+          </>
+        )}
+
+        {progress && (
+          <Card className="bg-muted/30 p-3 text-sm">
+            진행 {progress.done}/{progress.total}
+            {progress.done === progress.total && (
+              <span className="ml-2 text-green-600">완료</span>
+            )}
+          </Card>
+        )}
+
+        {errors.length > 0 && (
+          <Card className="border-destructive bg-destructive/10 p-3 text-sm text-destructive">
+            <p className="font-medium">건너뛰거나 실패한 항목 ({errors.length})</p>
+            <ul className="mt-1 list-disc pl-4 text-xs">
+              {errors.map((e, i) => (
+                <li key={i}>{e}</li>
+              ))}
+            </ul>
+          </Card>
+        )}
+
+        <div className="flex justify-end gap-2 pt-2">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onClose}
+            disabled={running}
+          >
+            {errors.length > 0 ? "닫기" : "취소"}
+          </Button>
+          <Button
+            type="button"
+            onClick={handleImport}
+            disabled={!presetDetail.data || selectedCount === 0 || running}
+          >
+            {running
+              ? `추가 중… ${progress!.done}/${progress!.total}`
+              : `${selectedCount}개 추가`}
+          </Button>
+        </div>
+      </div>
+    </Modal>
   );
 }
 
