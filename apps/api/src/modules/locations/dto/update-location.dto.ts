@@ -1,9 +1,5 @@
-import { IsOptional, IsString, MaxLength, MinLength } from "class-validator";
+import { PartialType } from "@nestjs/mapped-types";
+import { CreateLocationDto } from "./create-location.dto";
 
-export class UpdateLocationDto {
-  @IsOptional()
-  @IsString()
-  @MinLength(1)
-  @MaxLength(100)
-  name?: string;
-}
+// Inherits name + omnihubId from CreateLocationDto, all optional.
+export class UpdateLocationDto extends PartialType(CreateLocationDto) {}

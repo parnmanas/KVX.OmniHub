@@ -12,7 +12,7 @@ export default function DashboardPage() {
   const onlineHubs =
     hubs.data?.filter((h) => h.status === "online").length ?? 0;
   const assignedHubs =
-    hubs.data?.filter((h) => h.equipment !== null).length ?? 0;
+    hubs.data?.filter((h) => (h.equipments?.length ?? 0) > 0).length ?? 0;
 
   return (
     <div className="space-y-6">

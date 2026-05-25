@@ -1,0 +1,40 @@
+{
+  "brand": "Acer",
+  "device": "PROJECTOR",
+  "variant": "Acer H/P/X/S series (ASCII IR-code protocol)",
+  "controlType": "RS232",
+  "notes": [
+    "Source: Acer H7530D / H6510BD / P1283i / S5201M service manuals.",
+    "Wire: D-Sub 9-pin cross-over. 9600 8N1, no flow control.",
+    "Format: '* 0 IR <NNN>' + CR  — where NNN is a 3-digit decimal IR code (zero-padded).",
+    "Bytes: 0x2A 0x20 0x30 0x20 0x49 0x52 0x20 <digit> <digit> <digit> 0x0D.",
+    "On success the projector replies with 'OK<CR>'."
+  ],
+  "commands": {
+    "power_on":          { "baud": 9600, "dataBits": 8, "parity": "none", "stopBits": 1, "bytes": [42, 32, 48, 32, 73, 82, 32, 48, 48, 49, 13], "responseTimeoutMs": 300 },
+    "power_off":         { "baud": 9600, "dataBits": 8, "parity": "none", "stopBits": 1, "bytes": [42, 32, 48, 32, 73, 82, 32, 48, 48, 50, 13], "responseTimeoutMs": 300 },
+    "keystone":          { "baud": 9600, "dataBits": 8, "parity": "none", "stopBits": 1, "bytes": [42, 32, 48, 32, 73, 82, 32, 48, 48, 52, 13], "responseTimeoutMs": 300 },
+    "mute":              { "baud": 9600, "dataBits": 8, "parity": "none", "stopBits": 1, "bytes": [42, 32, 48, 32, 73, 82, 32, 48, 48, 54, 13], "responseTimeoutMs": 300 },
+    "freeze":            { "baud": 9600, "dataBits": 8, "parity": "none", "stopBits": 1, "bytes": [42, 32, 48, 32, 73, 82, 32, 48, 48, 55, 13], "responseTimeoutMs": 300 },
+    "menu":              { "baud": 9600, "dataBits": 8, "parity": "none", "stopBits": 1, "bytes": [42, 32, 48, 32, 73, 82, 32, 48, 48, 56, 13], "responseTimeoutMs": 300 },
+    "up":                { "baud": 9600, "dataBits": 8, "parity": "none", "stopBits": 1, "bytes": [42, 32, 48, 32, 73, 82, 32, 48, 48, 57, 13], "responseTimeoutMs": 300 },
+    "down":              { "baud": 9600, "dataBits": 8, "parity": "none", "stopBits": 1, "bytes": [42, 32, 48, 32, 73, 82, 32, 48, 49, 48, 13], "responseTimeoutMs": 300 },
+    "right":             { "baud": 9600, "dataBits": 8, "parity": "none", "stopBits": 1, "bytes": [42, 32, 48, 32, 73, 82, 32, 48, 49, 49, 13], "responseTimeoutMs": 300 },
+    "left":              { "baud": 9600, "dataBits": 8, "parity": "none", "stopBits": 1, "bytes": [42, 32, 48, 32, 73, 82, 32, 48, 49, 50, 13], "responseTimeoutMs": 300 },
+    "resync":            { "baud": 9600, "dataBits": 8, "parity": "none", "stopBits": 1, "bytes": [42, 32, 48, 32, 73, 82, 32, 48, 49, 52, 13], "responseTimeoutMs": 300 },
+    "source_vga":        { "baud": 9600, "dataBits": 8, "parity": "none", "stopBits": 1, "bytes": [42, 32, 48, 32, 73, 82, 32, 48, 49, 53, 13], "responseTimeoutMs": 300 },
+    "source_pbpr":       { "baud": 9600, "dataBits": 8, "parity": "none", "stopBits": 1, "bytes": [42, 32, 48, 32, 73, 82, 32, 48, 49, 55, 13], "responseTimeoutMs": 300 },
+    "source_svideo":     { "baud": 9600, "dataBits": 8, "parity": "none", "stopBits": 1, "bytes": [42, 32, 48, 32, 73, 82, 32, 48, 49, 56, 13], "responseTimeoutMs": 300 },
+    "source_composite":  { "baud": 9600, "dataBits": 8, "parity": "none", "stopBits": 1, "bytes": [42, 32, 48, 32, 73, 82, 32, 48, 49, 57, 13], "responseTimeoutMs": 300 },
+    "source_component":  { "baud": 9600, "dataBits": 8, "parity": "none", "stopBits": 1, "bytes": [42, 32, 48, 32, 73, 82, 32, 48, 50, 48, 13], "responseTimeoutMs": 300 },
+    "aspect_16_9":       { "baud": 9600, "dataBits": 8, "parity": "none", "stopBits": 1, "bytes": [42, 32, 48, 32, 73, 82, 32, 48, 50, 49, 13], "responseTimeoutMs": 300 },
+    "aspect_4_3":        { "baud": 9600, "dataBits": 8, "parity": "none", "stopBits": 1, "bytes": [42, 32, 48, 32, 73, 82, 32, 48, 50, 50, 13], "responseTimeoutMs": 300 },
+    "volume_up":         { "baud": 9600, "dataBits": 8, "parity": "none", "stopBits": 1, "bytes": [42, 32, 48, 32, 73, 82, 32, 48, 50, 51, 13], "responseTimeoutMs": 300 },
+    "volume_down":       { "baud": 9600, "dataBits": 8, "parity": "none", "stopBits": 1, "bytes": [42, 32, 48, 32, 73, 82, 32, 48, 50, 52, 13], "responseTimeoutMs": 300 },
+    "brightness":        { "baud": 9600, "dataBits": 8, "parity": "none", "stopBits": 1, "bytes": [42, 32, 48, 32, 73, 82, 32, 48, 50, 53, 13], "responseTimeoutMs": 300 },
+    "contrast":          { "baud": 9600, "dataBits": 8, "parity": "none", "stopBits": 1, "bytes": [42, 32, 48, 32, 73, 82, 32, 48, 50, 54, 13], "responseTimeoutMs": 300 },
+    "color_temp":        { "baud": 9600, "dataBits": 8, "parity": "none", "stopBits": 1, "bytes": [42, 32, 48, 32, 73, 82, 32, 48, 50, 55, 13], "responseTimeoutMs": 300 },
+    "hide":              { "baud": 9600, "dataBits": 8, "parity": "none", "stopBits": 1, "bytes": [42, 32, 48, 32, 73, 82, 32, 48, 51, 48, 13], "responseTimeoutMs": 300 },
+    "source":            { "baud": 9600, "dataBits": 8, "parity": "none", "stopBits": 1, "bytes": [42, 32, 48, 32, 73, 82, 32, 48, 51, 49, 13], "responseTimeoutMs": 300 }
+  }
+}

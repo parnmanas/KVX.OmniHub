@@ -17,9 +17,11 @@ import {
   HEARTBEAT_INTERVAL_MS,
   HEARTBEAT_TIMEOUT_MS,
   WS_PATH,
+  encodeIrPayload,
   type DeviceToServerMessage,
   type IrPayload,
   type RelayPayload,
+  type Rs232Payload,
   type ServerToDeviceMessage,
 } from "@omnihub/shared";
 import { Repository } from "typeorm";
@@ -28,7 +30,7 @@ import { OmniHubDevice } from "../entities";
 import { DeviceRegistry } from "./device-registry.service";
 import { normalizeMac, verifyToken } from "./pairing.service";
 
-type PendingKind = "ir_learn" | "ir_send" | "relay_set";
+type PendingKind = "ir_learn" | "ir_send" | "relay_set" | "rs232_send";
 
 interface PendingRequest {
   kind: PendingKind;
@@ -165,7 +167,7 @@ export class OmnihubGateway
     const deviceId = normalizeMac(msg.deviceId);
     const device = await this.devices.findOne({
       where: { deviceId },
-      relations: { equipment: true },
+      relations: { equipments: true },
     });
 
     // No token yet — device must run pair_request flow
@@ -199,9 +201,13 @@ export class OmnihubGateway
       },
     );
 
+    // hello_ack carries a single equipment id for backward compat with
+    // older firmware that displayed it on a small OLED. With 1:N now, we
+    // just pick the first assigned equipment (or null) — the firmware
+    // doesn't make routing decisions based on this field.
     this.send(client, {
       type: "hello_ack",
-      assignedEquipmentId: device.equipment?.id ?? null,
+      assignedEquipmentId: device.equipments?.[0]?.id ?? null,
     });
     this.log.log(`device ${deviceId} authenticated`);
   }
@@ -346,6 +352,30 @@ export class OmnihubGateway
   ): Promise<void> {
     const { ws, deviceId } = await this.getDeviceSocket(omnihubRowId);
     const requestId = randomUUID();
+
+    // Encode the payload to a raw burst here on the server. This keeps the
+    // firmware protocol-agnostic — adding a new IR protocol becomes a pure
+    // server-side change, no reflash. If encoding fails (unsupported
+    // protocol, no decoded/raw), refuse the send.
+    const encoded = encodeIrPayload(payload);
+    if (!encoded) {
+      throw new Error(
+        `cannot encode IR payload: protocol=${payload.protocol}, ` +
+          `decoded=${payload.decoded ? "yes" : "no"}, raw=${payload.raw.length}`,
+      );
+    }
+
+    // Build the wire payload: keep the original protocol/decoded for
+    // diagnostics on the firmware side, but ALWAYS provide raw so the
+    // firmware can just call sendRaw(buf, n, khz) without a per-protocol
+    // switch. Existing firmware that still dispatches on protocol keeps
+    // working too — defense in depth during the migration.
+    const wirePayload: IrPayload = {
+      protocol: payload.protocol,
+      decoded: payload.decoded,
+      raw: encoded.raw,
+    };
+
     return new Promise<void>((resolve, reject) => {
       const timer = setTimeout(() => {
         this.pending.delete(requestId);
@@ -358,7 +388,13 @@ export class OmnihubGateway
         reject,
         timer,
       });
-      this.send(ws, { type: "ir_send", requestId, payload, repeat });
+      this.send(ws, {
+        type: "ir_send",
+        requestId,
+        payload: wirePayload,
+        repeat,
+        khz: encoded.khz,
+      });
     });
   }
 
@@ -390,6 +426,37 @@ export class OmnihubGateway
     });
   }
 
+  async requestRs232Send(
+    omnihubRowId: string,
+    payload: Rs232Payload,
+  ): Promise<string | null> {
+    const { ws, deviceId } = await this.getDeviceSocket(omnihubRowId);
+    const requestId = randomUUID();
+    // If the preset asks for a response read-back, stretch the ack window
+    // to cover that read plus a 1s grace. Otherwise use the default ack
+    // timeout — bytes are written synchronously over the UART, fast.
+    const ackTimeout =
+      (payload.responseTimeoutMs ?? 0) > 0
+        ? Math.min(payload.responseTimeoutMs! + 1_000, 15_000)
+        : SEND_ACK_TIMEOUT_MS;
+    return new Promise<string | null>((resolve, reject) => {
+      const timer = setTimeout(() => {
+        this.pending.delete(requestId);
+        reject(new Error("rs232 ack timeout"));
+      }, ackTimeout);
+      this.pending.set(requestId, {
+        kind: "rs232_send",
+        deviceId,
+        // resolve receives `string | null` from onAck (the projector's
+        // reply as a hex string, or null if no read-back was requested).
+        resolve: (v) => resolve((v as string | null) ?? null),
+        reject,
+        timer,
+      });
+      this.send(ws, { type: "rs232_send", requestId, payload });
+    });
+  }
+
   private async getDeviceSocket(
     omnihubRowId: string,
   ): Promise<{ ws: WebSocket; deviceId: string }> {
@@ -408,7 +475,9 @@ export class OmnihubGateway
     clearTimeout(pending.timer);
     this.pending.delete(msg.requestId);
     if (msg.ok) {
-      pending.resolve(undefined);
+      // RS232 may include a response (hex string) — pass it through so the
+      // caller can return the projector's status reply to the UI.
+      pending.resolve(msg.response ?? null);
     } else {
       pending.reject(new Error(msg.error ?? "device reported failure"));
     }

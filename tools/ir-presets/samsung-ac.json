@@ -1,0 +1,34 @@
+{
+  "$schema": "./preset.schema.json",
+  "brand": "Samsung",
+  "device": "AC",
+  "notes": [
+    "Source: IRDB (github.com/probonopd/irdb) — MIT license",
+    "Model: Samsung ARH-700 / DB93-11115K remote (split/cassette AC units)",
+    "CSV source: codes/Samsung/Air Conditioner/1,8.csv (device=1, subdevice=8, Samsung20 protocol)",
+    "Protocol: Samsung20 (proprietary 20-bit). Address=0x0801 (device=1, subdevice=8), command=function byte.",
+    "Samsung AC (all split and inverter models) uses a stateful multi-byte proprietary protocol.",
+    "Each command encodes the full AC state (mode + temperature + fan + swing) into one packet.",
+    "This means simple decoded integers are NOT sufficient — raw IR capture is required.",
+    "Use the learn flow to record actual commands from your Samsung AC remote.",
+    "Carrier: 38 kHz."
+  ],
+  "carrier": 38000,
+  "commands": {
+    "power":      { "protocol": "UNKNOWN", "decoded": null, "raw": [] },
+    "mode_cool":  { "protocol": "UNKNOWN", "decoded": null, "raw": [] },
+    "mode_heat":  { "protocol": "UNKNOWN", "decoded": null, "raw": [] },
+    "mode_dry":   { "protocol": "UNKNOWN", "decoded": null, "raw": [] },
+    "mode_fan":   { "protocol": "UNKNOWN", "decoded": null, "raw": [] },
+    "mode_auto":  { "protocol": "UNKNOWN", "decoded": null, "raw": [] },
+    "temp_up":    { "protocol": "UNKNOWN", "decoded": null, "raw": [] },
+    "temp_down":  { "protocol": "UNKNOWN", "decoded": null, "raw": [] },
+    "fan_low":    { "protocol": "UNKNOWN", "decoded": null, "raw": [] },
+    "fan_med":    { "protocol": "UNKNOWN", "decoded": null, "raw": [] },
+    "fan_high":   { "protocol": "UNKNOWN", "decoded": null, "raw": [] },
+    "fan_auto":   { "protocol": "UNKNOWN", "decoded": null, "raw": [] },
+    "swing":      { "protocol": "UNKNOWN", "decoded": null, "raw": [] },
+    "sleep":      { "protocol": "UNKNOWN", "decoded": null, "raw": [] },
+    "timer":      { "protocol": "UNKNOWN", "decoded": null, "raw": [] }
+  }
+}

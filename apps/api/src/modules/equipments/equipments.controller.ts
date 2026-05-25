@@ -108,9 +108,14 @@ export class EquipmentsController {
     return this.service.recordFunction(id, body?.timeoutMs);
   }
 
+  // Returns 200 with { response: string | null } instead of 204 so RS232
+  // status queries can hand back the projector's reply (e.g. *POW=ON#).
+  // IR/RELAY/WOL/HTTP_API always resolve with response=null and the body
+  // is harmless for callers that ignore it.
   @Post("functions/:id/play")
-  @HttpCode(204)
-  playFunction(@Param("id", ParseUUIDPipe) id: string): Promise<void> {
+  playFunction(
+    @Param("id", ParseUUIDPipe) id: string,
+  ): Promise<{ response: string | null }> {
     return this.service.playFunction(id);
   }
 }

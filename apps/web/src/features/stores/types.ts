@@ -5,6 +5,9 @@ export interface Store {
   name: string;
   address: string | null;
   phone: string | null;
+  // Default hub for this store (Equipment → Location → Store fallback chain).
+  omnihubId: string | null;
+  omnihub?: OmnihubLite | null;
   createdAt: string;
   updatedAt: string;
   devices?: OmnihubLite[];
@@ -30,6 +33,7 @@ export interface CreateStoreInput {
   name: string;
   address?: string;
   phone?: string;
+  omnihubId?: string | null;
 }
 
 export type UpdateStoreInput = Partial<CreateStoreInput>;

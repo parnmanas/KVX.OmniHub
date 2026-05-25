@@ -1,0 +1,316 @@
+{
+  "$schema": "./preset.schema.json",
+  "brand": "LG",
+  "device": "AC",
+  "variant": "6711A20083V (LG 28-bit 구형 split)",
+  "notes": [
+    "Source: IRremoteESP8266 (github.com/crankyoldgit/IRremoteESP8266) — ir_LG.h/.cpp, MIT license.",
+    "Remote model: LG6711A20083V.  Korean lineup: TS-H122ERM1 등 2010~2013년 모델.",
+    "LG (28-bit) — SwingV는 단일 토글 명령만 사용.",
+    "All state commands are computed for the model's fan-code scheme using IRremoteESP8266's encoder. mode_*, temp_*, fan_* defaults: COOL mode @ 24°C with fan-auto.",
+    "Toggle/sub commands (power_off, light_toggle, swing_v_*) are literal IRremoteESP8266 constants and identical across LG2 models.",
+    "Horizontal swing not supported by this remote.",
+    "power_on sends the standard COOL/24°C/auto state packet — modern LG ACs treat any state with Power=ON as a power-on command.",
+    "All commands round-trip with the firmware decoder; for non-default state combinations, send the raw computed code from the encoder or capture via learn flow.",
+    "Carrier: 38 kHz."
+  ],
+  "carrier": 38000,
+  "commands": {
+    "power_on": {
+      "protocol": "LG",
+      "decoded": {
+        "value": "880095E",
+        "bits": 28
+      },
+      "raw": []
+    },
+    "mode_cool": {
+      "protocol": "LG",
+      "decoded": {
+        "value": "880095E",
+        "bits": 28
+      },
+      "raw": []
+    },
+    "mode_dry": {
+      "protocol": "LG",
+      "decoded": {
+        "value": "880195F",
+        "bits": 28
+      },
+      "raw": []
+    },
+    "mode_fan": {
+      "protocol": "LG",
+      "decoded": {
+        "value": "8802950",
+        "bits": 28
+      },
+      "raw": []
+    },
+    "mode_auto": {
+      "protocol": "LG",
+      "decoded": {
+        "value": "8803951",
+        "bits": 28
+      },
+      "raw": []
+    },
+    "mode_heat": {
+      "protocol": "LG",
+      "decoded": {
+        "value": "8804952",
+        "bits": 28
+      },
+      "raw": []
+    },
+    "temp_16": {
+      "protocol": "LG",
+      "decoded": {
+        "value": "8800156",
+        "bits": 28
+      },
+      "raw": []
+    },
+    "temp_17": {
+      "protocol": "LG",
+      "decoded": {
+        "value": "8800257",
+        "bits": 28
+      },
+      "raw": []
+    },
+    "temp_18": {
+      "protocol": "LG",
+      "decoded": {
+        "value": "8800358",
+        "bits": 28
+      },
+      "raw": []
+    },
+    "temp_19": {
+      "protocol": "LG",
+      "decoded": {
+        "value": "8800459",
+        "bits": 28
+      },
+      "raw": []
+    },
+    "temp_20": {
+      "protocol": "LG",
+      "decoded": {
+        "value": "880055A",
+        "bits": 28
+      },
+      "raw": []
+    },
+    "temp_21": {
+      "protocol": "LG",
+      "decoded": {
+        "value": "880065B",
+        "bits": 28
+      },
+      "raw": []
+    },
+    "temp_22": {
+      "protocol": "LG",
+      "decoded": {
+        "value": "880075C",
+        "bits": 28
+      },
+      "raw": []
+    },
+    "temp_23": {
+      "protocol": "LG",
+      "decoded": {
+        "value": "880085D",
+        "bits": 28
+      },
+      "raw": []
+    },
+    "temp_24": {
+      "protocol": "LG",
+      "decoded": {
+        "value": "880095E",
+        "bits": 28
+      },
+      "raw": []
+    },
+    "temp_25": {
+      "protocol": "LG",
+      "decoded": {
+        "value": "8800A5F",
+        "bits": 28
+      },
+      "raw": []
+    },
+    "temp_26": {
+      "protocol": "LG",
+      "decoded": {
+        "value": "8800B50",
+        "bits": 28
+      },
+      "raw": []
+    },
+    "temp_27": {
+      "protocol": "LG",
+      "decoded": {
+        "value": "8800C51",
+        "bits": 28
+      },
+      "raw": []
+    },
+    "temp_28": {
+      "protocol": "LG",
+      "decoded": {
+        "value": "8800D52",
+        "bits": 28
+      },
+      "raw": []
+    },
+    "temp_29": {
+      "protocol": "LG",
+      "decoded": {
+        "value": "8800E53",
+        "bits": 28
+      },
+      "raw": []
+    },
+    "temp_30": {
+      "protocol": "LG",
+      "decoded": {
+        "value": "8800F54",
+        "bits": 28
+      },
+      "raw": []
+    },
+    "fan_auto": {
+      "protocol": "LG",
+      "decoded": {
+        "value": "880095E",
+        "bits": 28
+      },
+      "raw": []
+    },
+    "fan_lowest": {
+      "protocol": "LG",
+      "decoded": {
+        "value": "8800909",
+        "bits": 28
+      },
+      "raw": []
+    },
+    "fan_low": {
+      "protocol": "LG",
+      "decoded": {
+        "value": "880091A",
+        "bits": 28
+      },
+      "raw": []
+    },
+    "fan_med": {
+      "protocol": "LG",
+      "decoded": {
+        "value": "880092B",
+        "bits": 28
+      },
+      "raw": []
+    },
+    "fan_high": {
+      "protocol": "LG",
+      "decoded": {
+        "value": "880094D",
+        "bits": 28
+      },
+      "raw": []
+    },
+    "power_off": {
+      "protocol": "LG",
+      "decoded": {
+        "value": "88C0051",
+        "bits": 28
+      },
+      "raw": []
+    },
+    "light_toggle": {
+      "protocol": "LG",
+      "decoded": {
+        "value": "88C00A6",
+        "bits": 28
+      },
+      "raw": []
+    },
+    "swing_v_toggle": {
+      "protocol": "LG",
+      "decoded": {
+        "value": "8810001",
+        "bits": 28
+      },
+      "raw": []
+    },
+    "swing_v_lowest": {
+      "protocol": "LG",
+      "decoded": {
+        "value": "8813048",
+        "bits": 28
+      },
+      "raw": []
+    },
+    "swing_v_low": {
+      "protocol": "LG",
+      "decoded": {
+        "value": "8813059",
+        "bits": 28
+      },
+      "raw": []
+    },
+    "swing_v_middle": {
+      "protocol": "LG",
+      "decoded": {
+        "value": "881306A",
+        "bits": 28
+      },
+      "raw": []
+    },
+    "swing_v_upper_middle": {
+      "protocol": "LG",
+      "decoded": {
+        "value": "881307B",
+        "bits": 28
+      },
+      "raw": []
+    },
+    "swing_v_high": {
+      "protocol": "LG",
+      "decoded": {
+        "value": "881308C",
+        "bits": 28
+      },
+      "raw": []
+    },
+    "swing_v_highest": {
+      "protocol": "LG",
+      "decoded": {
+        "value": "881309D",
+        "bits": 28
+      },
+      "raw": []
+    },
+    "swing_v_auto": {
+      "protocol": "LG",
+      "decoded": {
+        "value": "8813149",
+        "bits": 28
+      },
+      "raw": []
+    },
+    "swing_v_off": {
+      "protocol": "LG",
+      "decoded": {
+        "value": "881315A",
+        "bits": 28
+      },
+      "raw": []
+    }
+  }
+}

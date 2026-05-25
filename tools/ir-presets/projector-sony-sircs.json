@@ -1,0 +1,17 @@
+{
+  "brand": "Sony",
+  "device": "PROJECTOR",
+  "variant": "Sony VPL series (SIRCS-over-RS232, 8-byte packet)",
+  "controlType": "RS232",
+  "notes": [
+    "Source: Sony VPL service / RS232 protocol references (covers VPL-CH/CW/FH/PHZ/PX/VW/HW series).",
+    "Wire: D-Sub 9-pin cross-over. 38400 8E1 (8 data bits, EVEN parity, 1 stop bit). Note this is unusual — most projectors are 8N1.",
+    "Packet format: A9 17 <cmd-hi> <cmd-lo> <data-hi> <data-lo> 3F 9A (8 bytes). The leading A9 + trailing 9A frame the SIRCS-encoded payload. 3F is the checksum/category byte.",
+    "Only power_on / power_off are universally documented across forums; other commands (HDMI/mute/menu) vary by VPL model line and are deliberately omitted to avoid sending model-specific codes that may misbehave on other units.",
+    "For full command sets, request the model-specific 'RS-232C Protocol Manual' from Sony Professional support."
+  ],
+  "commands": {
+    "power_on":  { "baud": 38400, "dataBits": 8, "parity": "even", "stopBits": 1, "bytes": [169, 23, 46, 0, 0, 0, 63, 154], "responseTimeoutMs": 500 },
+    "power_off": { "baud": 38400, "dataBits": 8, "parity": "even", "stopBits": 1, "bytes": [169, 23, 47, 0, 0, 0, 63, 154], "responseTimeoutMs": 500 }
+  }
+}

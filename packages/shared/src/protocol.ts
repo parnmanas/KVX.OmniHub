@@ -1,4 +1,9 @@
-import type { IrPayload, IrProtocol, RelayPayload } from "./equipment.js";
+import type {
+  IrPayload,
+  IrProtocol,
+  RelayPayload,
+  Rs232Payload,
+} from "./equipment.js";
 
 // ============================================================================
 // OmniHub <-> Server WebSocket protocol
@@ -30,6 +35,10 @@ export interface AckMessage {
   requestId: string;
   ok: boolean;
   error?: string;
+  // RS232 status queries return the projector's reply bytes here as a hex
+  // string (e.g. "2A504F573D4F4E23" for *POW=ON#). Only present when the
+  // command requested a response read-back via responseTimeoutMs.
+  response?: string;
 }
 
 export interface IrLearnedMessage {
@@ -75,12 +84,23 @@ export interface IrSendRequest {
   requestId: string;
   payload: IrPayload;
   repeat?: number;
+  // Carrier kHz hint for raw transmission. Server fills this in after
+  // encoding (NEC/SAMSUNG/LG/LG2 = 38, SONY = 40, RC5/RC6 = 36). Firmware
+  // uses it when payload.raw is the transmit source. Optional for
+  // backward-compatible captures (omit = 38).
+  khz?: number;
 }
 
 export interface RelaySetRequest {
   type: "relay_set";
   requestId: string;
   payload: RelayPayload;
+}
+
+export interface Rs232SendRequest {
+  type: "rs232_send";
+  requestId: string;
+  payload: Rs232Payload;
 }
 
 export interface ErrorMessage {
@@ -97,6 +117,7 @@ export type ServerToDeviceMessage =
   | IrLearnRequest
   | IrSendRequest
   | RelaySetRequest
+  | Rs232SendRequest
   | ErrorMessage;
 
 // ---------- Constants ----------

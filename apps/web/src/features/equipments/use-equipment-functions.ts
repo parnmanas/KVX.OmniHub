@@ -113,10 +113,15 @@ export function useRecordEquipmentFunction(equipmentId: string) {
   });
 }
 
+export interface PlayResult {
+  response: string | null; // hex string when RS232 status query
+}
+
 export function usePlayEquipmentFunction() {
   return useMutation({
-    mutationFn: async (id: string) => {
-      await api.post(`/functions/${id}/play`);
+    mutationFn: async (id: string): Promise<PlayResult> => {
+      const { data } = await api.post<PlayResult>(`/functions/${id}/play`);
+      return data ?? { response: null };
     },
   });
 }

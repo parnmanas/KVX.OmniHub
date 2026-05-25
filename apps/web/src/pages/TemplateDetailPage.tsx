@@ -1,6 +1,11 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { Link, useParams } from "react-router-dom";
-import { ControlType, type FunctionPayload } from "@omnihub/shared";
+import {
+  ControlType,
+  type ControlType as ControlTypeT,
+  type FunctionPayload,
+} from "@omnihub/shared";
+import type { PresetCommandPayload } from "@/features/presets/types";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -52,6 +57,50 @@ const PAYLOAD_EXAMPLES: Record<string, FunctionPayload> = {
   HTTP_API: EMPTY_PAYLOADS.HTTP_API,
   RELAY: EMPTY_PAYLOADS.RELAY,
 };
+
+// Render a preset command's protocol / value in the import preview table.
+// Different control types want different summaries (IR shows protocol +
+// decoded hex; RS232 shows baud + byte count; HTTP shows method + url).
+function describePresetCommand(
+  controlType: ControlTypeT,
+  cmd: PresetCommandPayload,
+): { label: string; value: string } {
+  switch (controlType) {
+    case "IR": {
+      const ir = cmd as Extract<PresetCommandPayload, { protocol: string }>;
+      return {
+        label: ir.protocol,
+        value: ir.decoded
+          ? `${ir.decoded.value} (${ir.decoded.bits}b)`
+          : `raw[${ir.raw.length}]`,
+      };
+    }
+    case "RS232": {
+      const rs = cmd as Extract<PresetCommandPayload, { baud: number }>;
+      return {
+        label: `${rs.baud} ${rs.dataBits}${rs.parity[0].toUpperCase()}${rs.stopBits}`,
+        value: `${rs.bytes.length} bytes`,
+      };
+    }
+    case "HTTP_API": {
+      const h = cmd as Extract<PresetCommandPayload, { method: string }>;
+      return { label: h.method, value: h.url };
+    }
+    case "RELAY": {
+      const r = cmd as Extract<PresetCommandPayload, { channel: number }>;
+      return {
+        label: `ch${r.channel}`,
+        value: r.durationMs ? `${r.state} ${r.durationMs}ms` : r.state,
+      };
+    }
+    case "WOL": {
+      const w = cmd as Extract<PresetCommandPayload, { mac: string }>;
+      return { label: "WOL", value: w.mac };
+    }
+    default:
+      return { label: controlType, value: "" };
+  }
+}
 
 function isIrRecorded(fn: TemplateFunction): boolean {
   if (fn.controlType !== "IR") return false;
@@ -725,6 +774,11 @@ function ImportPresetModal({
     let done = 0;
     // Compute starting order: append after last existing.
     let nextOrder = existingNames.size;
+    // Preset declares one controlType for ALL commands. Wrap each raw
+    // payload in the matching discriminated FunctionPayload. The server
+    // does the same on createFromPreset; here we mirror it for template
+    // function import.
+    const ct = (presetDetail.data?.controlType ?? "IR") as ControlTypeT;
     for (const cmdName of toImport) {
       const payload = presetDetail.data.commands[cmdName];
       try {
@@ -734,8 +788,8 @@ function ImportPresetModal({
         }
         await createFunction.mutateAsync({
           name: cmdName,
-          controlType: "IR",
-          payload: { controlType: "IR", data: payload },
+          controlType: ct,
+          payload: { controlType: ct, data: payload } as FunctionPayload,
           order: nextOrder++,
         });
       } catch (err) {
@@ -772,7 +826,8 @@ function ImportPresetModal({
             <option value="">선택…</option>
             {presets.data?.map((p) => (
               <option key={p.name} value={p.name}>
-                {p.brand} {p.device} — {p.name} ({p.commandCount}개 명령)
+                {p.brand} {p.device}
+                {p.variant ? ` · ${p.variant}` : ""} — {p.commandCount}개 명령
               </option>
             ))}
           </Select>
@@ -837,6 +892,10 @@ function ImportPresetModal({
                   {Object.entries(presetDetail.data.commands).map(
                     ([cmdName, cmd]) => {
                       const exists = existingNames.has(cmdName);
+                      const desc = describePresetCommand(
+                        presetDetail.data?.controlType ?? "IR",
+                        cmd,
+                      );
                       return (
                         <tr
                           key={cmdName}
@@ -857,12 +916,10 @@ function ImportPresetModal({
                           </td>
                           <td className="px-3 py-2 font-medium">{cmdName}</td>
                           <td className="px-3 py-2 font-mono text-xs">
-                            {cmd.protocol}
+                            {desc.label}
                           </td>
                           <td className="px-3 py-2 font-mono text-xs text-muted-foreground">
-                            {cmd.decoded
-                              ? `${cmd.decoded.value} (${cmd.decoded.bits}b)`
-                              : `raw[${cmd.raw.length}]`}
+                            {desc.value}
                           </td>
                           <td className="px-3 py-2 text-xs">
                             {exists ? (

@@ -7,20 +7,22 @@ import { Label } from "@/components/ui/label";
 import { Modal } from "@/components/ui/modal";
 import {
   useCreateLocation,
+  useDeleteLocation,
   useLocations,
 } from "@/features/locations/use-locations";
-import {
-  useStore,
-  useUpdateStore,
-} from "@/features/stores/use-stores";
+import type { Location } from "@/features/locations/types";
+import { EditLocationModal } from "@/features/locations/EditLocationModal";
+import { useStore } from "@/features/stores/use-stores";
+import { EditStoreModal } from "@/features/stores/EditStoreModal";
 
 export default function StoreDetailPage() {
   const { id } = useParams<{ id: string }>();
   const store = useStore(id);
   const locations = useLocations(id);
-  const updateStore = useUpdateStore(id ?? "");
+  const deleteLocation = useDeleteLocation();
   const [openAdd, setOpenAdd] = useState(false);
-  const [editingName, setEditingName] = useState<string | null>(null);
+  const [editStoreOpen, setEditStoreOpen] = useState(false);
+  const [editLocation, setEditLocation] = useState<Location | null>(null);
 
   if (!id) return null;
   if (store.isLoading) {
@@ -42,51 +44,35 @@ export default function StoreDetailPage() {
           ← 매장 목록
         </Link>
         <div className="mt-2 flex items-center gap-3">
-          {editingName !== null ? (
-            <form
-              className="flex items-center gap-2"
-              onSubmit={async (e) => {
-                e.preventDefault();
-                if (editingName.trim()) {
-                  await updateStore.mutateAsync({ name: editingName.trim() });
-                  setEditingName(null);
-                }
-              }}
-            >
-              <Input
-                value={editingName}
-                onChange={(e) => setEditingName(e.target.value)}
-                autoFocus
-                className="w-64"
-              />
-              <Button type="submit" size="sm">
-                저장
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                onClick={() => setEditingName(null)}
-              >
-                취소
-              </Button>
-            </form>
-          ) : (
-            <>
-              <h1 className="text-xl font-semibold">{store.data.name}</h1>
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => setEditingName(store.data!.name)}
-              >
-                이름 변경
-              </Button>
-            </>
-          )}
+          <h1 className="text-xl font-semibold">{store.data.name}</h1>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setEditStoreOpen(true)}
+          >
+            편집
+          </Button>
         </div>
         <p className="text-sm text-muted-foreground">
           {store.data.address ?? "주소 없음"}
           {store.data.phone ? ` · ${store.data.phone}` : ""}
+        </p>
+        <p className="mt-1 text-xs text-muted-foreground">
+          기본 OmniHub:{" "}
+          {store.data.omnihub ? (
+            <span
+              className={
+                store.data.omnihub.status === "online"
+                  ? "text-green-600"
+                  : "text-muted-foreground"
+              }
+            >
+              {store.data.omnihub.name ?? store.data.omnihub.deviceId} (
+              {store.data.omnihub.status})
+            </span>
+          ) : (
+            <span className="text-muted-foreground">없음</span>
+          )}
         </p>
       </div>
 
@@ -123,12 +109,33 @@ export default function StoreDetailPage() {
                       </ul>
                     )}
                   </div>
-                  <div className="mt-4 flex justify-end">
+                  <div className="mt-4 flex justify-end gap-2">
                     <Link to={`/locations/${loc.id}`}>
                       <Button variant="outline" size="sm">
-                        위치 상세 / 장비 관리
+                        장비 관리
                       </Button>
                     </Link>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setEditLocation(loc)}
+                    >
+                      편집
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => {
+                        if (confirm(`"${loc.name}" 위치를 삭제할까요?`)) {
+                          deleteLocation.mutate({
+                            id: loc.id,
+                            storeId: id,
+                          });
+                        }
+                      }}
+                    >
+                      삭제
+                    </Button>
                   </div>
                 </Card>
               );
@@ -141,6 +148,14 @@ export default function StoreDetailPage() {
         storeId={id}
         open={openAdd}
         onClose={() => setOpenAdd(false)}
+      />
+      <EditLocationModal
+        location={editLocation}
+        onClose={() => setEditLocation(null)}
+      />
+      <EditStoreModal
+        store={editStoreOpen ? store.data : null}
+        onClose={() => setEditStoreOpen(false)}
       />
     </div>
   );

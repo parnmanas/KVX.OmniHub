@@ -3,6 +3,7 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
+import type { IrPayload } from "@omnihub/shared";
 import { api } from "@/lib/api";
 import type {
   CreateOmnihubInput,
@@ -67,5 +68,35 @@ export function useDeleteOmnihub() {
       await api.delete(`/omnihubs/${id}`);
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: omnihubsKeys.all }),
+  });
+}
+
+export interface IrTestInput {
+  omnihubId: string;
+  payload: IrPayload;
+  repeat?: number;
+}
+
+// Normalize the IR payload before sending to /ir-test so the server validator
+// (which only accepts hex chars, no "0x" prefix) doesn't reject legacy data.
+function normalizeIrPayload(payload: IrPayload): IrPayload {
+  if (payload.decoded) {
+    const value = payload.decoded.value.replace(/^0x/i, "");
+    return {
+      ...payload,
+      decoded: { ...payload.decoded, value },
+    };
+  }
+  return payload;
+}
+
+export function useIrTest() {
+  return useMutation({
+    mutationFn: async (vars: IrTestInput) => {
+      await api.post(`/omnihubs/${vars.omnihubId}/ir-test`, {
+        payload: normalizeIrPayload(vars.payload),
+        repeat: vars.repeat,
+      });
+    },
   });
 }

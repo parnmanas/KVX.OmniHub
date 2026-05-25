@@ -31,6 +31,11 @@ decode_type_t protoFromString(const char* s) {
   if (strcmp(s, "RC6") == 0) return RC6;
   if (strcmp(s, "SAMSUNG") == 0) return SAMSUNG;
   if (strcmp(s, "LG") == 0) return LG;
+  // LG2 and LG_AC both map to the LG2 decode_type — same wire format.
+  // LG_AC is just a semantic flag (each value is a full AC state snapshot);
+  // transmission is identical to LG2.
+  if (strcmp(s, "LG2") == 0) return LG2;
+  if (strcmp(s, "LG_AC") == 0) return LG2;
   return UNKNOWN;
 }
 
@@ -42,6 +47,7 @@ const char* protoToString(decode_type_t t) {
     case RC6: return "RC6";
     case SAMSUNG: return "SAMSUNG";
     case LG: return "LG";
+    case LG2: return "LG2";
     default: return "UNKNOWN";
   }
 }
@@ -74,34 +80,13 @@ void begin() {
   // Receiver only enabled during a learn() call to keep loop() cheap.
 }
 
-bool send(const JsonVariantConst& payload) {
+bool send(const JsonVariantConst& payload, uint16_t khz) {
   if (!g_send) return false;
-  const char* proto = payload["protocol"] | "UNKNOWN";
-  JsonVariantConst decoded = payload["decoded"];
   JsonArrayConst raw = payload["raw"].as<JsonArrayConst>();
 
-  decode_type_t t = protoFromString(proto);
-  if (t != UNKNOWN && !decoded.isNull()) {
-    const char* valHex = decoded["value"] | "";
-    uint16_t bits = decoded["bits"] | 0;
-    if (bits > 0 && strlen(valHex) > 0) {
-      uint64_t value = parseHex(valHex);
-      // sendXxx() returns void on most overloads; assume success.
-      switch (t) {
-        case NEC:     g_send->sendNEC(value, bits); return true;
-        case SONY:    g_send->sendSony(value, bits); return true;
-        case RC5:     g_send->sendRC5(value, bits); return true;
-        case RC6:     g_send->sendRC6(value, bits); return true;
-        case SAMSUNG: g_send->sendSAMSUNG(value, bits); return true;
-        case LG:      g_send->sendLG(value, bits); return true;
-        default: break;
-      }
-    }
-  }
-
-  // Raw fallback. Defense-in-depth: a learn() bug or malformed payload could
-  // hand us garbage captured from a noisy / wrong sensor. Refuse anything
-  // that doesn't look like a plausible consumer-IR burst before blasting it.
+  // Preferred path: server already encoded the IR signal to a raw burst.
+  // This decouples the firmware from per-protocol encoders — adding a new
+  // protocol is now a pure server-side change (no reflash).
   if (raw && raw.size() > 0) {
     const size_t n = raw.size();
     // Size sanity: too short = noise glitch, too long = buffer-overflow trash.
@@ -124,16 +109,54 @@ bool send(const JsonVariantConst& payload) {
         return false;
       }
     }
+    if (khz < 30 || khz > 60) {
+      Serial.printf("[ir] khz %u out of range, clamping to 38\n", (unsigned)khz);
+      khz = 38;
+    }
     auto* buf = static_cast<uint16_t*>(malloc(n * sizeof(uint16_t)));
     if (!buf) return false;
     for (size_t i = 0; i < n; ++i) {
       buf[i] = static_cast<uint16_t>(raw[i].as<uint32_t>());
     }
-    g_send->sendRaw(buf, n, 38);  // 38 kHz carrier — standard for consumer IR
+    Serial.printf("[ir] sendRaw n=%u khz=%u\n", (unsigned)n, (unsigned)khz);
+    g_send->sendRaw(buf, n, khz);
     free(buf);
     return true;
   }
 
+  // Fallback: legacy decoded-only payload (older API server / unit tests).
+  // Kept so an older API instance can still drive a new firmware, but the
+  // server normally pre-encodes raw and this branch is dead code at
+  // runtime. Once all deployments use the encoder, this whole block can
+  // be removed (and with it the per-protocol switch, parseHex helper, and
+  // protoFromString — meaningful simplification of the firmware).
+  const char* proto = payload["protocol"] | "UNKNOWN";
+  JsonVariantConst decoded = payload["decoded"];
+  decode_type_t t = protoFromString(proto);
+  if (t != UNKNOWN && !decoded.isNull()) {
+    const char* valHex = decoded["value"] | "";
+    uint16_t bits = decoded["bits"] | 0;
+    if (bits > 0 && strlen(valHex) > 0) {
+      uint64_t value = parseHex(valHex);
+      Serial.printf("[ir] fallback decoded send proto=%s value=0x%llX bits=%u\n",
+                    proto, (unsigned long long)value, (unsigned)bits);
+      switch (t) {
+        case NEC:     g_send->sendNEC(value, bits); return true;
+        case SONY:    g_send->sendSony(value, bits); return true;
+        case RC5:     g_send->sendRC5(value, bits); return true;
+        case RC6:     g_send->sendRC6(value, bits); return true;
+        case SAMSUNG: g_send->sendSAMSUNG(value, bits); return true;
+        case LG:      g_send->sendLG(value, bits); return true;
+        case LG2:     g_send->sendLG2(value, bits); return true;
+        default:
+          Serial.printf("[ir] unsupported decoded protocol: %s (decode_type=%d)\n",
+                        proto, (int)t);
+          return false;
+      }
+    }
+  }
+
+  Serial.println("[ir] send refused: no raw burst and no usable decoded fallback");
   return false;
 }
 

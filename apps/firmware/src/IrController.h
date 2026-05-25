@@ -16,7 +16,9 @@ namespace IrController {
 
 void begin();
 
-bool send(const JsonVariantConst& payload);
+// `khz` is the carrier frequency for raw transmission (server encoded).
+// Defaults to 38 for backward compatibility with old captures.
+bool send(const JsonVariantConst& payload, uint16_t khz = 38);
 
 // Fills `out` with the captured IR data. `out` must be a JsonObject ready
 // to populate. Returns true on capture, false on timeout.

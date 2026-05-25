@@ -9,6 +9,7 @@
 #include "PinMap.h"
 #include "RelayController.h"
 #include "ResetButton.h"
+#include "Rs232Controller.h"
 #include "StatusLed.h"
 #include "WifiPortal.h"
 
@@ -93,6 +94,7 @@ void setup() {
 
   IrController::begin();
   RelayController::begin();
+  Rs232Controller::begin();
 
   // If the user holds GPIO0 during boot, force the captive portal.
   bool forcePortal = digitalRead(PIN_RESET_BTN) == LOW;

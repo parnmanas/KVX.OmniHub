@@ -1,7 +1,6 @@
 import { createSocket } from "node:dgram";
 import {
   BadRequestException,
-  ConflictException,
   Injectable,
   NotFoundException,
   ServiceUnavailableException,
@@ -25,6 +24,13 @@ import type {
   UpdateFunctionDto,
 } from "./dto/function.dto";
 import type { EquipmentType } from "@omnihub/shared";
+import { inferCapabilities } from "./capability-inferrer";
+
+// Returned by playFunction() — RS232 commands can include a status reply
+// from the projector. Other control types resolve with response=null.
+export interface PlayResult {
+  response: string | null;
+}
 
 // Hard ceiling for HTTP_API outbound calls. Local IoT (Hue/Shelly/Tasmota)
 // always responds in <1s; cloud APIs (Tuya/SmartThings) usually <3s. 10s
@@ -70,42 +76,77 @@ export class EquipmentsService {
 
   // ---------- equipments ----------
 
-  list(locationId?: string, storeId?: string): Promise<Equipment[]> {
+  // We always load Equipment.omnihub + Location.omnihub + Store.omnihub so
+  // the response can carry a `resolvedOmnihub` field that mirrors what
+  // requireOmnihubForFunction() will actually dispatch with. The UI uses
+  // this to decide whether to enable the play button — equipment-level
+  // omnihubId alone isn't enough (the hub could be inherited from the
+  // location or the store).
+  private static readonly FULL_RELATIONS = {
+    location: { store: { omnihub: true }, omnihub: true },
+    omnihub: true,
+    functions: true,
+  };
+
+  async list(locationId?: string, storeId?: string): Promise<Equipment[]> {
+    let rows: Equipment[];
     if (locationId) {
-      return this.equipments.find({
+      rows = await this.equipments.find({
         where: { locationId },
         order: { createdAt: "ASC" },
-        relations: { omnihub: true, functions: true },
+        relations: EquipmentsService.FULL_RELATIONS,
+      });
+    } else if (storeId) {
+      rows = await this.equipments.find({
+        where: { location: { storeId } },
+        order: { createdAt: "ASC" },
+        relations: EquipmentsService.FULL_RELATIONS,
+      });
+    } else {
+      rows = await this.equipments.find({
+        order: { createdAt: "ASC" },
+        relations: EquipmentsService.FULL_RELATIONS,
       });
     }
-    if (storeId) {
-      // All equipments across all locations of this store.
-      return this.equipments
-        .createQueryBuilder("eq")
-        .leftJoinAndSelect("eq.omnihub", "omnihub")
-        .leftJoinAndSelect("eq.functions", "functions")
-        .leftJoin("eq.location", "location")
-        .where("location.storeId = :storeId", { storeId })
-        .orderBy("eq.createdAt", "ASC")
-        .getMany();
-    }
-    return this.equipments.find({
-      order: { createdAt: "ASC" },
-      relations: { omnihub: true, functions: true },
-    });
+    return rows.map((r) => this.withResolvedOmnihub(r));
   }
 
   async get(id: string): Promise<Equipment> {
     const eq = await this.equipments.findOne({
       where: { id },
-      relations: {
-        location: { store: true },
-        omnihub: true,
-        functions: true,
-      },
+      relations: EquipmentsService.FULL_RELATIONS,
     });
     if (!eq) throw new NotFoundException(`equipment not found: ${id}`);
-    return eq;
+    return this.withResolvedOmnihub(eq);
+  }
+
+  // Annotate an Equipment with which hub WILL be used for IR/RS232 send
+  // and where that came from. Matches requireOmnihubForFunction's logic.
+  // Also computes high-level capabilities from the raw function list so the
+  // UI can render unified controls regardless of underlying protocol.
+  private withResolvedOmnihub(eq: Equipment): Equipment {
+    const direct = eq.omnihub ?? null;
+    const fromLocation = eq.location?.omnihub ?? null;
+    const fromStore = eq.location?.store?.omnihub ?? null;
+    const resolved = direct ?? fromLocation ?? fromStore;
+    const source = direct
+      ? "equipment"
+      : fromLocation
+        ? "location"
+        : fromStore
+          ? "store"
+          : null;
+    const capabilities = eq.functions
+      ? inferCapabilities(eq.functions)
+      : [];
+    // Attach as plain props; TypeORM serializes them through to JSON.
+    // We don't add them to the entity class because they're derived state,
+    // not persistent fields — the entity stays a pure database row shape.
+    return Object.assign(eq, {
+      resolvedOmnihub: resolved,
+      resolvedOmnihubSource: source,
+      capabilities,
+    });
   }
 
   async create(dto: CreateEquipmentDto): Promise<Equipment> {
@@ -190,15 +231,26 @@ export class EquipmentsService {
     );
 
     // Insert each command as a function. Order preserves preset iteration.
+    // A preset declares one controlType for ALL its commands (preset is
+    // homogeneous by design); we wrap each raw payload in the matching
+    // FunctionPayload discriminator. Older preset files without a
+    // controlType field default to IR (PresetsService fills that in).
+    const presetControlType = preset.controlType ?? "IR";
     const entries = Object.entries(preset.commands);
     try {
-      const rows = entries.map(([cmdName, payload], idx) =>
+      const rows = entries.map(([cmdName, raw], idx) =>
         this.functions.create({
           equipmentId: equipment.id,
           name: cmdName,
           icon: null,
-          controlType: "IR",
-          payload: { controlType: "IR", data: payload },
+          controlType: presetControlType,
+          // The cast is safe because PresetsService verified the file's
+          // declared controlType — bad preset shape would already have
+          // been logged + skipped at load time.
+          payload: {
+            controlType: presetControlType,
+            data: raw,
+          } as never,
           order: idx,
         }),
       );
@@ -314,7 +366,7 @@ export class EquipmentsService {
     return saved;
   }
 
-  async playFunction(id: string): Promise<void> {
+  async playFunction(id: string): Promise<PlayResult> {
     const fn = await this.functions.findOne({ where: { id } });
     if (!fn) throw new NotFoundException(`function not found: ${id}`);
     if (fn.payload.controlType !== fn.controlType) {
@@ -322,6 +374,7 @@ export class EquipmentsService {
         "function payload type does not match controlType",
       );
     }
+    let response: PlayResult = { response: null };
     try {
       switch (fn.controlType) {
         case "IR":
@@ -336,6 +389,11 @@ export class EquipmentsService {
         case "RELAY":
           await this.dispatchRelay(fn);
           break;
+        case "RS232":
+          // RS232 is the only path that returns data — the projector's reply
+          // bytes (hex). Other control types resolve to undefined.
+          response = { response: await this.dispatchRs232(fn) };
+          break;
         default: {
           // exhaustiveness check at compile time
           const _exhaustive: never = fn.controlType;
@@ -344,7 +402,8 @@ export class EquipmentsService {
           );
         }
       }
-      await this.logControl(fn, "success", null);
+      await this.logControl(fn, "success", null, response.response);
+      return response;
     } catch (err) {
       if (err instanceof BadRequestException || err instanceof NotFoundException) {
         // Don't log validation failures as control failures.
@@ -554,25 +613,93 @@ export class EquipmentsService {
     await this.gateway.requestRelaySet(omnihubId, p);
   }
 
+  /**
+   * RS232 serial output via the OmniHub's UART (Serial2 + MAX3232).
+   * Validates line parameters and byte range, then ships the payload to
+   * the firmware which reconfigures the UART and writes the bytes.
+   *
+   * Returns the projector's reply bytes as a hex string when the preset
+   * asked for a read-back (responseTimeoutMs > 0), null otherwise. That
+   * reply is how callers learn current state — e.g. BenQ's *POW=?# query
+   * comes back as `*POW=ON#` so the UI can render "전원: 켜짐".
+   */
+  private async dispatchRs232(fn: EquipmentFunction): Promise<string | null> {
+    if (fn.payload.controlType !== "RS232") {
+      throw new BadRequestException("function payload is not RS232");
+    }
+    const p = fn.payload.data;
+    // Common projector bauds; reject anything else to catch typos in presets.
+    const allowedBauds = [
+      1200, 2400, 4800, 9600, 14400, 19200, 38400, 57600, 76800, 115200,
+      230400, 460800, 921600,
+    ];
+    if (!allowedBauds.includes(p.baud)) {
+      throw new BadRequestException(
+        `payload.baud must be one of ${allowedBauds.join("/")}; got ${p.baud}`,
+      );
+    }
+    if (p.dataBits !== 7 && p.dataBits !== 8) {
+      throw new BadRequestException(
+        `payload.dataBits must be 7 or 8 (got ${p.dataBits})`,
+      );
+    }
+    if (!["none", "even", "odd"].includes(p.parity)) {
+      throw new BadRequestException(
+        `payload.parity must be none|even|odd (got ${p.parity})`,
+      );
+    }
+    if (p.stopBits !== 1 && p.stopBits !== 2) {
+      throw new BadRequestException(
+        `payload.stopBits must be 1 or 2 (got ${p.stopBits})`,
+      );
+    }
+    if (!Array.isArray(p.bytes) || p.bytes.length === 0) {
+      throw new BadRequestException("payload.bytes must be non-empty array");
+    }
+    if (p.bytes.length > 1024) {
+      throw new BadRequestException(
+        `payload.bytes too long (${p.bytes.length}); firmware caps at 1024`,
+      );
+    }
+    for (let i = 0; i < p.bytes.length; i++) {
+      const b = p.bytes[i];
+      if (!Number.isInteger(b) || b < 0 || b > 255) {
+        throw new BadRequestException(
+          `payload.bytes[${i}] must be 0..255 integer (got ${b})`,
+        );
+      }
+    }
+    const omnihubId = await this.requireOmnihubForFunction(fn);
+    return this.gateway.requestRs232Send(omnihubId, p);
+  }
+
+  // Resolve which OmniHub should transmit this function's signal.
+  // Hierarchical fallback so operators can either assign a hub per device
+  // (most specific) or once at the store / location level (covers all
+  // child equipment): Equipment → Location → Store. First non-null wins.
   private async requireOmnihubForFunction(
     fn: EquipmentFunction,
   ): Promise<string> {
-    const eq = await this.equipments.findOne({ where: { id: fn.equipmentId } });
+    const eq = await this.equipments.findOne({
+      where: { id: fn.equipmentId },
+      relations: { location: { store: true } },
+    });
     if (!eq) {
       throw new NotFoundException(`equipment not found: ${fn.equipmentId}`);
     }
-    if (!eq.omnihubId) {
-      throw new BadRequestException(
-        "equipment has no OmniHub assigned — assign one first",
-      );
-    }
-    return eq.omnihubId;
+    if (eq.omnihubId) return eq.omnihubId;
+    if (eq.location?.omnihubId) return eq.location.omnihubId;
+    if (eq.location?.store?.omnihubId) return eq.location.store.omnihubId;
+    throw new BadRequestException(
+      "no OmniHub assigned for this equipment, its location, or its store",
+    );
   }
 
   private async logControl(
     fn: EquipmentFunction,
     result: "success" | "fail" | "timeout",
     errorMessage: string | null,
+    response: string | null = null,
   ): Promise<void> {
     await this.controlLogs.save(
       this.controlLogs.create({
@@ -581,27 +708,23 @@ export class EquipmentsService {
         triggeredBy: "user",
         result,
         errorMessage,
+        response,
       }),
     );
   }
 
   // ---------- helpers ----------
 
+  // OmniHub-to-Equipment is 1:N — a single IR blaster in a room normally
+  // controls several devices (TV + AC + projector). We just verify the
+  // hub exists; no exclusivity check, no conflict on duplicate assignment.
   private async assertOmnihubAvailable(
     omnihubId: string,
-    selfEquipmentId: string | null,
+    _selfEquipmentId: string | null,
   ): Promise<void> {
-    const device = await this.devices.findOne({
-      where: { id: omnihubId },
-      relations: { equipment: true },
-    });
-    if (!device) {
+    const exists = await this.devices.exists({ where: { id: omnihubId } });
+    if (!exists) {
       throw new BadRequestException(`omnihub not found: ${omnihubId}`);
-    }
-    if (device.equipment && device.equipment.id !== selfEquipmentId) {
-      throw new ConflictException(
-        `omnihub already assigned to equipment ${device.equipment.id}`,
-      );
     }
   }
 }

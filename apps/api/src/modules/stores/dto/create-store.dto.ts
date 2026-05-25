@@ -1,4 +1,11 @@
-import { IsOptional, IsString, MaxLength, MinLength } from "class-validator";
+import {
+  IsOptional,
+  IsString,
+  IsUUID,
+  MaxLength,
+  MinLength,
+  ValidateIf,
+} from "class-validator";
 
 export class CreateStoreDto {
   @IsString()
@@ -15,4 +22,10 @@ export class CreateStoreDto {
   @IsString()
   @MaxLength(50)
   phone?: string;
+
+  // Default OmniHub for this store. null clears, undefined leaves unchanged.
+  @ValidateIf((_, v) => v !== null)
+  @IsOptional()
+  @IsUUID()
+  omnihubId?: string | null;
 }

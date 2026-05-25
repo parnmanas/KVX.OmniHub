@@ -52,3 +52,19 @@
 #ifndef PIN_RELAY_ACTIVE_HIGH
 #define PIN_RELAY_ACTIVE_HIGH 0
 #endif
+
+// ---------- RS232 (Serial2) ----------
+// ESP32 has 3 UARTs. Serial(0) is the USB debug console, Serial1 conflicts
+// with the SPI flash on default ESP32 dev boards, so we use Serial2 for the
+// RS232 link to projectors / AV gear.
+//
+// IMPORTANT: ESP32 pins are 3.3V TTL. Real RS232 uses ±12V — you MUST add a
+// MAX3232 transceiver between these pins and the projector's DB9 connector.
+// Without it some projectors won't see the signal at all, or worse, the
+// inverted 12V on the projector's TX line could damage the ESP32.
+#ifndef PIN_RS232_RX
+#define PIN_RS232_RX 16
+#endif
+#ifndef PIN_RS232_TX
+#define PIN_RS232_TX 17
+#endif

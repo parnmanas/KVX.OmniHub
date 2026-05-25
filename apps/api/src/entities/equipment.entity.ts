@@ -5,7 +5,6 @@ import {
   JoinColumn,
   ManyToOne,
   OneToMany,
-  OneToOne,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from "typeorm";
@@ -37,7 +36,12 @@ export class Equipment {
   @Column({ type: "uuid" })
   locationId!: string;
 
-  @OneToOne(() => OmniHubDevice, (d) => d.equipment, { nullable: true })
+  // Many equipments can share one OmniHub — one IR blaster in a room
+  // typically controls several devices (TV + AC + projector).
+  @ManyToOne(() => OmniHubDevice, (d) => d.equipments, {
+    nullable: true,
+    onDelete: "SET NULL",
+  })
   @JoinColumn()
   omnihub!: OmniHubDevice | null;
 

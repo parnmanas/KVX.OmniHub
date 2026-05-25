@@ -4,7 +4,7 @@ import {
   Entity,
   Index,
   ManyToOne,
-  OneToOne,
+  OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from "typeorm";
@@ -49,8 +49,10 @@ export class OmniHubDevice {
   @Column({ type: "uuid", nullable: true })
   storeId!: string | null;
 
-  @OneToOne(() => Equipment, (e) => e.omnihub, { nullable: true })
-  equipment!: Equipment | null;
+  // One hub can host many equipments (1:N) — a single IR blaster in a
+  // room controls all the IR devices in that room.
+  @OneToMany(() => Equipment, (e) => e.omnihub)
+  equipments!: Equipment[];
 
   @CreateDateColumn()
   createdAt!: Date;

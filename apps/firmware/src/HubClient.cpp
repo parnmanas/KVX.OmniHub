@@ -7,6 +7,7 @@
 #include "FirmwareVersion.h"
 #include "IrController.h"
 #include "RelayController.h"
+#include "Rs232Controller.h"
 
 namespace {
 
@@ -71,11 +72,16 @@ void sendAck(const char* requestId, bool ok, const char* err = nullptr) {
 void onIrSend(const JsonDocument& msg) {
   const char* requestId = msg["requestId"] | "";
   JsonVariantConst payload = msg["payload"];
-  bool ok = IrController::send(payload);
+  // Server-side encoding fills payload.raw with the microsecond burst and
+  // sets top-level "khz" with the carrier frequency for that protocol.
+  // Firmware just transmits the raw burst — no per-protocol switch needed.
+  // Default 38 kHz preserves behavior for older captures without "khz".
+  uint16_t khz = msg["khz"] | 38;
+  bool ok = IrController::send(payload, khz);
   uint8_t repeat = msg["repeat"] | 0;
   for (uint8_t i = 0; ok && i < repeat; ++i) {
     delay(40);
-    ok = IrController::send(payload);
+    ok = IrController::send(payload, khz);
   }
   sendAck(requestId, ok, ok ? nullptr : "send_failed");
 }
@@ -98,6 +104,32 @@ void onIrLearn(const JsonDocument& msg) {
     body["raw"].to<JsonArray>();
   }
   sendJson(outDoc);
+}
+
+void onRs232Send(const JsonDocument& msg) {
+  const char* requestId = msg["requestId"] | "";
+  JsonVariantConst payload = msg["payload"];
+  // Only capture a response if the preset asked for one (responseTimeoutMs
+  // > 0). We surface up to 64 bytes back via the ack.error slot so it
+  // shows in the UI/server logs without changing the wire schema.
+  String response;
+  bool ok = Rs232Controller::send(payload, &response);
+  if (!ok) {
+    sendAck(requestId, false, "send_failed");
+    return;
+  }
+  if (response.length() > 0) {
+    // Tunnel diagnostics through the ack error field. Operators can see
+    // the projector echo in server logs; non-empty does NOT mean failure.
+    JsonDocument doc;
+    doc["type"] = "ack";
+    doc["requestId"] = requestId;
+    doc["ok"] = true;
+    doc["response"] = response;
+    sendJson(doc);
+  } else {
+    sendAck(requestId, true);
+  }
 }
 
 void onRelaySet(const JsonDocument& msg) {
@@ -155,6 +187,8 @@ void onMessage(uint8_t* payload, size_t length) {
     onIrLearn(doc);
   } else if (strcmp(type, "relay_set") == 0) {
     onRelaySet(doc);
+  } else if (strcmp(type, "rs232_send") == 0) {
+    onRs232Send(doc);
   } else if (strcmp(type, "error") == 0) {
     const char* code = doc["code"] | "?";
     const char* msg = doc["message"] | "";

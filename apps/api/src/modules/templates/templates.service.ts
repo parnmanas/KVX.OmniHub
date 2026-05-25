@@ -1,6 +1,5 @@
 import {
   BadRequestException,
-  ConflictException,
   Injectable,
   NotFoundException,
   ServiceUnavailableException,
@@ -212,17 +211,12 @@ export class TemplatesService {
     }
 
     if (dto.omnihubId) {
-      const device = await this.devices.findOne({
+      // OmniHub:Equipment is 1:N — just verify the hub exists.
+      const exists = await this.devices.exists({
         where: { id: dto.omnihubId },
-        relations: { equipment: true },
       });
-      if (!device) {
+      if (!exists) {
         throw new BadRequestException(`omnihub not found: ${dto.omnihubId}`);
-      }
-      if (device.equipment) {
-        throw new ConflictException(
-          `omnihub already assigned to equipment ${device.equipment.id}`,
-        );
       }
     }
 

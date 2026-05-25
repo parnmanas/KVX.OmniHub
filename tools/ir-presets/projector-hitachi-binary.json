@@ -1,0 +1,23 @@
+{
+  "brand": "Hitachi",
+  "device": "PROJECTOR",
+  "variant": "Hitachi CP / MP series (Binary protocol with header BE EF 03 06)",
+  "controlType": "RS232",
+  "notes": [
+    "Source: Hitachi CP-AW250N / CP-WX5505 / MP-WU8101 RS232 service manuals.",
+    "Wire: D-Sub 9-pin cross-over. 19200 8N1, no flow control. Default baud is 19200 (configurable 4800-115200 in the projector menu).",
+    "Packet format: BE EF 03 06 00 <CRC_lo> <CRC_hi> <action_lo> <action_hi> <type_lo> <type_hi> <code_lo> <code_hi>  — 13 bytes total.",
+    "CRC bytes are NOT a simple checksum — they are model-specific values pre-computed by Hitachi and listed in the manual's command table for each individual command.",
+    "Only power_on / power_off are included here because they share the same CRC across all CP/MP series. Other commands (input switching, mute, freeze, navigation) need the model-specific CRC from each projector's manual command table — request the 'RS-232C Communication Command Table' for the exact model in use.",
+    "GET commands (action 02 00) and their CRC values are universally documented across CP/MP series and are safe to send. Responses are 5 bytes: 1D <data_lo> <data_hi> <crc_lo> <crc_hi>. POWER GET returns 00 00=Off, 01 00=On, 02 00=Cool down. LAMP TIME / FILTER TIME GET return runtime in hours as a 16-bit little-endian value."
+  ],
+  "commands": {
+    "power_on":  { "baud": 19200, "dataBits": 8, "parity": "none", "stopBits": 1, "bytes": [190, 239, 3, 6, 0, 186, 210, 1, 0, 0, 96, 1, 0], "responseTimeoutMs": 500 },
+    "power_off": { "baud": 19200, "dataBits": 8, "parity": "none", "stopBits": 1, "bytes": [190, 239, 3, 6, 0, 42, 211, 1, 0, 0, 96, 0, 0], "responseTimeoutMs": 500 },
+    "query_power_state":  { "baud": 19200, "dataBits": 8, "parity": "none", "stopBits": 1, "bytes": [190, 239, 3, 6, 0, 25, 211, 2, 0, 0, 96, 0, 0], "responseTimeoutMs": 500 },
+    "query_input_source": { "baud": 19200, "dataBits": 8, "parity": "none", "stopBits": 1, "bytes": [190, 239, 3, 6, 0, 205, 210, 2, 0, 0, 32, 0, 0], "responseTimeoutMs": 500 },
+    "query_lamp_hours":   { "baud": 19200, "dataBits": 8, "parity": "none", "stopBits": 1, "bytes": [190, 239, 3, 6, 0, 194, 255, 2, 0, 144, 16, 0, 0], "responseTimeoutMs": 500 },
+    "query_filter_hours": { "baud": 19200, "dataBits": 8, "parity": "none", "stopBits": 1, "bytes": [190, 239, 3, 6, 0, 194, 240, 2, 0, 160, 16, 0, 0], "responseTimeoutMs": 500 },
+    "query_error_status": { "baud": 19200, "dataBits": 8, "parity": "none", "stopBits": 1, "bytes": [190, 239, 3, 6, 0, 217, 216, 2, 0, 32, 96, 0, 0], "responseTimeoutMs": 500 }
+  }
+}

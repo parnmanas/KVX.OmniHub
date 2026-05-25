@@ -7,7 +7,8 @@ export interface Omnihub {
   firmwareVersion: string | null;
   storeId: string | null;
   store: { id: string; name: string } | null;
-  equipment: { id: string; name: string } | null;
+  // 1:N — one hub can host many equipments.
+  equipments: { id: string; name: string }[];
   createdAt: string;
   updatedAt: string;
 }

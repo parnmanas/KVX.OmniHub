@@ -1,0 +1,39 @@
+{
+  "brand": "Sharp",
+  "device": "PROJECTOR",
+  "variant": "Sharp XV / PG / Notevision series (ASCII 8-byte command protocol)",
+  "controlType": "RS232",
+  "notes": [
+    "Source: Sharp Notevision PG-F212X / PG-F255W / XG-V10X / XV-Z2000 RS232 operation manuals.",
+    "Wire: D-Sub 9-pin cross-over. 9600 8N1 (some models also support 115200), no flow control.",
+    "Format: 4-char command + 4-char parameter (right-justified, space-padded) + CR (0x0D). Total 9 bytes.",
+    "Example: 'POWR   1' + CR sets power on. The 4-character parameter is space-padded on the left.",
+    "Projector replies with 'OK<CR>' on success or 'ERR<CR>' on failure (4 bytes + CR).",
+    "Query commands use '?' as the parameter (right-justified, padded). Responses: POWR? -> '0' (off) / '1' (on). TLPT? -> 4-digit lamp hours (0000-9999). TLPS? -> '0' (OK) / '1' (replace soon) / '2' (replace now) / '3' (lamp out). IMVL? -> remaining lamp life percentage. AVMT? -> '0' (off) / '1' (on). VOLA? -> 0-60 volume. IMOD? -> current input source (RGB/DVI/VID/SVD)."
+  ],
+  "commands": {
+    "power_on":          { "baud": 9600, "dataBits": 8, "parity": "none", "stopBits": 1, "bytes": [80, 79, 87, 82, 32, 32, 32, 49, 13], "responseTimeoutMs": 300 },
+    "power_off":         { "baud": 9600, "dataBits": 8, "parity": "none", "stopBits": 1, "bytes": [80, 79, 87, 82, 32, 32, 32, 48, 13], "responseTimeoutMs": 300 },
+    "power_status":      { "baud": 9600, "dataBits": 8, "parity": "none", "stopBits": 1, "bytes": [80, 79, 87, 82, 32, 32, 32, 63, 13], "responseTimeoutMs": 300 },
+    "source_computer1":  { "baud": 9600, "dataBits": 8, "parity": "none", "stopBits": 1, "bytes": [73, 82, 71, 66, 32, 32, 32, 49, 13], "responseTimeoutMs": 300 },
+    "source_computer2":  { "baud": 9600, "dataBits": 8, "parity": "none", "stopBits": 1, "bytes": [73, 82, 71, 66, 32, 32, 32, 50, 13], "responseTimeoutMs": 300 },
+    "source_dvi":        { "baud": 9600, "dataBits": 8, "parity": "none", "stopBits": 1, "bytes": [73, 66, 68, 83, 32, 32, 32, 49, 13], "responseTimeoutMs": 300 },
+    "source_video":      { "baud": 9600, "dataBits": 8, "parity": "none", "stopBits": 1, "bytes": [73, 86, 69, 68, 32, 32, 32, 49, 13], "responseTimeoutMs": 300 },
+    "source_svideo":     { "baud": 9600, "dataBits": 8, "parity": "none", "stopBits": 1, "bytes": [73, 83, 86, 68, 32, 32, 32, 49, 13], "responseTimeoutMs": 300 },
+    "input_check":       { "baud": 9600, "dataBits": 8, "parity": "none", "stopBits": 1, "bytes": [73, 77, 79, 68, 32, 32, 32, 63, 13], "responseTimeoutMs": 300 },
+    "av_mute_on":        { "baud": 9600, "dataBits": 8, "parity": "none", "stopBits": 1, "bytes": [73, 77, 85, 84, 32, 32, 32, 49, 13], "responseTimeoutMs": 300 },
+    "av_mute_off":       { "baud": 9600, "dataBits": 8, "parity": "none", "stopBits": 1, "bytes": [73, 77, 85, 84, 32, 32, 32, 48, 13], "responseTimeoutMs": 300 },
+    "blank_on":          { "baud": 9600, "dataBits": 8, "parity": "none", "stopBits": 1, "bytes": [73, 77, 66, 75, 32, 32, 32, 49, 13], "responseTimeoutMs": 300 },
+    "blank_off":         { "baud": 9600, "dataBits": 8, "parity": "none", "stopBits": 1, "bytes": [73, 77, 66, 75, 32, 32, 32, 48, 13], "responseTimeoutMs": 300 },
+    "freeze_on":         { "baud": 9600, "dataBits": 8, "parity": "none", "stopBits": 1, "bytes": [70, 82, 69, 90, 32, 32, 32, 49, 13], "responseTimeoutMs": 300 },
+    "freeze_off":        { "baud": 9600, "dataBits": 8, "parity": "none", "stopBits": 1, "bytes": [70, 82, 69, 90, 32, 32, 32, 48, 13], "responseTimeoutMs": 300 },
+    "auto_sync":         { "baud": 9600, "dataBits": 8, "parity": "none", "stopBits": 1, "bytes": [65, 68, 74, 70, 32, 32, 32, 49, 13], "responseTimeoutMs": 300 },
+    "lamp_status":       { "baud": 9600, "dataBits": 8, "parity": "none", "stopBits": 1, "bytes": [84, 76, 80, 83, 32, 32, 32, 49, 13], "responseTimeoutMs": 300 },
+    "lamp_timer":        { "baud": 9600, "dataBits": 8, "parity": "none", "stopBits": 1, "bytes": [84, 76, 84, 84, 32, 32, 32, 49, 13], "responseTimeoutMs": 300 },
+    "query_power_state":   { "baud": 9600, "dataBits": 8, "parity": "none", "stopBits": 1, "bytes": [80, 79, 87, 82, 32, 32, 32, 63, 13], "responseTimeoutMs": 300 },
+    "query_input_source":  { "baud": 9600, "dataBits": 8, "parity": "none", "stopBits": 1, "bytes": [73, 77, 79, 68, 32, 32, 32, 63, 13], "responseTimeoutMs": 300 },
+    "query_lamp_hours":    { "baud": 9600, "dataBits": 8, "parity": "none", "stopBits": 1, "bytes": [84, 76, 84, 84, 32, 32, 32, 63, 13], "responseTimeoutMs": 300 },
+    "query_lamp_state":    { "baud": 9600, "dataBits": 8, "parity": "none", "stopBits": 1, "bytes": [84, 76, 80, 83, 32, 32, 32, 63, 13], "responseTimeoutMs": 300 },
+    "query_mute_video":    { "baud": 9600, "dataBits": 8, "parity": "none", "stopBits": 1, "bytes": [73, 77, 85, 84, 32, 32, 32, 63, 13], "responseTimeoutMs": 300 }
+  }
+}

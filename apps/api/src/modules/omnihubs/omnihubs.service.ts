@@ -26,14 +26,14 @@ export class OmnihubsService {
   list(): Promise<OmniHubDevice[]> {
     return this.devices.find({
       order: { createdAt: "ASC" },
-      relations: { store: true, equipment: true },
+      relations: { store: true, equipments: true },
     });
   }
 
   async get(id: string): Promise<OmniHubDevice> {
     const device = await this.devices.findOne({
       where: { id },
-      relations: { store: true, equipment: true },
+      relations: { store: true, equipments: true },
     });
     if (!device) throw new NotFoundException(`omnihub not found: ${id}`);
     return device;

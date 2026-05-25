@@ -6,7 +6,7 @@ import {
   NotFoundException,
   OnModuleInit,
 } from "@nestjs/common";
-import type { IrPreset, IrPresetSummary } from "./presets.types";
+import type { Preset, PresetSummary } from "./presets.types";
 
 // Walk up from a starting directory until we find a sentinel file that marks
 // the monorepo root. This lets the service load presets regardless of whether
@@ -27,16 +27,18 @@ function presetsDir(): string {
   return path.join(root, "tools", "ir-presets");
 }
 
+// Loads IR preset JSON files from tools/ir-presets at startup.
+// Each file = one model variant (e.g. lg-ac-akb75215403.json).
 @Injectable()
 export class PresetsService implements OnModuleInit {
   private readonly log = new Logger(PresetsService.name);
-  private readonly presets = new Map<string, IrPreset>();
+  private readonly presets = new Map<string, Preset>();
 
   onModuleInit(): void {
     const dir = presetsDir();
     if (!existsSync(dir)) {
       this.log.warn(
-        `presets dir not found at ${dir} — IR preset endpoints will return empty`,
+        `presets dir not found at ${dir} — preset endpoints will return empty`,
       );
       return;
     }
@@ -45,40 +47,44 @@ export class PresetsService implements OnModuleInit {
       const name = f.replace(/\.json$/, "");
       const filePath = path.join(dir, f);
       try {
-        const parsed = JSON.parse(readFileSync(filePath, "utf8")) as IrPreset;
+        const parsed = JSON.parse(readFileSync(filePath, "utf8")) as Preset;
         if (!parsed.brand || !parsed.device || !parsed.commands) {
           this.log.warn(
             `skipping ${f}: missing required fields (brand/device/commands)`,
           );
           continue;
         }
+        // Older preset files omit controlType — they're all IR by convention.
+        if (!parsed.controlType) parsed.controlType = "IR";
         this.presets.set(name, parsed);
       } catch (err) {
         this.log.warn(`failed to parse ${f}: ${(err as Error).message}`);
       }
     }
     this.log.log(
-      `loaded ${this.presets.size} IR presets from ${dir} ` +
+      `loaded ${this.presets.size} presets from ${dir} ` +
         `(${Array.from(this.presets.keys()).join(", ")})`,
     );
   }
 
-  list(): IrPresetSummary[] {
+  list(): PresetSummary[] {
     return Array.from(this.presets.entries())
       .map(([name, p]) => ({
         name,
         brand: p.brand,
         device: p.device,
+        variant: p.variant,
+        controlType: p.controlType ?? "IR",
         commandCount: Object.keys(p.commands).length,
       }))
-      .sort((a, b) =>
-        a.brand === b.brand
-          ? a.device.localeCompare(b.device)
-          : a.brand.localeCompare(b.brand),
-      );
+      .sort((a, b) => {
+        if (a.brand !== b.brand) return a.brand.localeCompare(b.brand);
+        if (a.device !== b.device) return a.device.localeCompare(b.device);
+        return (a.variant ?? "").localeCompare(b.variant ?? "");
+      });
   }
 
-  get(name: string): IrPreset {
+  get(name: string): Preset {
     const p = this.presets.get(name);
     if (!p) {
       throw new NotFoundException(`preset not found: ${name}`);

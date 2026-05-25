@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Modal } from "@/components/ui/modal";
-import { useOmnihub } from "@/features/omnihubs/use-omnihubs";
+import { useIrTest, useOmnihub } from "@/features/omnihubs/use-omnihubs";
 import {
   useRecordTemplateFunction,
   useTemplate,
@@ -322,9 +322,11 @@ function RecordRow({
   canRecord: boolean;
 }) {
   const recordMutation = useRecordTemplateFunction(templateId);
+  const irTestMutation = useIrTest();
   const [open, setOpen] = useState(false);
   const [showJson, setShowJson] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [playSuccess, setPlaySuccess] = useState(false);
 
   const isIr = fn.controlType === "IR";
   const recorded = isIrRecorded(fn);
@@ -342,6 +344,22 @@ function RecordRow({
       setError(extractError(err));
     } finally {
       setOpen(false);
+    }
+  }
+
+  async function handlePlay() {
+    if (fn.payload.controlType !== "IR") return;
+    setError(null);
+    setPlaySuccess(false);
+    try {
+      await irTestMutation.mutateAsync({
+        omnihubId,
+        payload: fn.payload.data,
+      });
+      setPlaySuccess(true);
+      setTimeout(() => setPlaySuccess(false), 1500);
+    } catch (err) {
+      setError(extractError(err));
     }
   }
 
@@ -386,15 +404,37 @@ function RecordRow({
               {showJson ? "접기" : "보기"}
             </Button>
             {isIr && (
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={!canRecord || recordMutation.isPending}
-                title={!canRecord ? "OmniHub 가 오프라인입니다" : ""}
-                onClick={handleRecord}
-              >
-                {recorded ? "재녹음" : "● 녹음"}
-              </Button>
+              <>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={!canRecord || recordMutation.isPending}
+                  title={!canRecord ? "OmniHub 가 오프라인입니다" : ""}
+                  onClick={handleRecord}
+                >
+                  {recorded ? "재녹음" : "● 녹음"}
+                </Button>
+                <Button
+                  size="sm"
+                  disabled={
+                    !canRecord || !recorded || irTestMutation.isPending
+                  }
+                  title={
+                    !canRecord
+                      ? "OmniHub 가 오프라인입니다"
+                      : !recorded
+                        ? "먼저 녹음하세요"
+                        : ""
+                  }
+                  onClick={handlePlay}
+                >
+                  {irTestMutation.isPending
+                    ? "전송 중…"
+                    : playSuccess
+                      ? "✓ 전송됨"
+                      : "▶ 재생"}
+                </Button>
+              </>
             )}
           </div>
         </td>

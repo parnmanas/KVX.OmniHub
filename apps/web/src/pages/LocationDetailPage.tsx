@@ -1,5 +1,6 @@
 import { useMemo, useState, type FormEvent } from "react";
 import { Link, useParams } from "react-router-dom";
+import { EquipmentType } from "@omnihub/shared";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -14,8 +15,8 @@ import {
 import {
   useDeleteLocation,
   useLocation,
-  useUpdateLocation,
 } from "@/features/locations/use-locations";
+import { EditLocationModal } from "@/features/locations/EditLocationModal";
 import { useOmnihubs } from "@/features/omnihubs/use-omnihubs";
 import { usePresets } from "@/features/presets/use-presets";
 import {
@@ -38,12 +39,11 @@ export default function LocationDetailPage() {
   const { id } = useParams<{ id: string }>();
   const location = useLocation(id);
   const equipments = useEquipments(id);
-  const updateLocation = useUpdateLocation();
   const deleteLocation = useDeleteLocation();
   const deleteEquipment = useDeleteEquipment();
   const navigate = useNavigate();
   const [openAdd, setOpenAdd] = useState(false);
-  const [editingName, setEditingName] = useState<string | null>(null);
+  const [editLocationOpen, setEditLocationOpen] = useState(false);
 
   if (!id) return null;
   if (location.isLoading) {
@@ -67,72 +67,52 @@ export default function LocationDetailPage() {
           ← {loc.store?.name ?? "매장"} 상세
         </Link>
         <div className="mt-2 flex items-center gap-3">
-          {editingName !== null ? (
-            <form
-              className="flex items-center gap-2"
-              onSubmit={async (e) => {
-                e.preventDefault();
-                if (editingName.trim()) {
-                  await updateLocation.mutateAsync({
-                    id: loc.id,
-                    input: { name: editingName.trim() },
-                  });
-                  setEditingName(null);
-                }
-              }}
-            >
-              <Input
-                value={editingName}
-                onChange={(e) => setEditingName(e.target.value)}
-                autoFocus
-                className="w-64"
-              />
-              <Button type="submit" size="sm">
-                저장
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                onClick={() => setEditingName(null)}
-              >
-                취소
-              </Button>
-            </form>
-          ) : (
-            <>
-              <h1 className="text-xl font-semibold">{loc.name}</h1>
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => setEditingName(loc.name)}
-              >
-                이름 변경
-              </Button>
-              <Button
-                size="sm"
-                variant="destructive"
-                onClick={async () => {
-                  if (
-                    confirm(
-                      `위치 "${loc.name}" 를 삭제할까요? 안에 있는 모든 장비도 함께 삭제됩니다.`,
-                    )
-                  ) {
-                    await deleteLocation.mutateAsync({
-                      id: loc.id,
-                      storeId,
-                    });
-                    navigate(`/stores/${storeId}`);
-                  }
-                }}
-              >
-                위치 삭제
-              </Button>
-            </>
-          )}
+          <h1 className="text-xl font-semibold">{loc.name}</h1>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setEditLocationOpen(true)}
+          >
+            편집
+          </Button>
+          <Button
+            size="sm"
+            variant="destructive"
+            onClick={async () => {
+              if (
+                confirm(
+                  `위치 "${loc.name}" 를 삭제할까요? 안에 있는 모든 장비도 함께 삭제됩니다.`,
+                )
+              ) {
+                await deleteLocation.mutateAsync({
+                  id: loc.id,
+                  storeId,
+                });
+                navigate(`/stores/${storeId}`);
+              }
+            }}
+          >
+            위치 삭제
+          </Button>
         </div>
         <p className="text-sm text-muted-foreground">
           {loc.store?.name ?? "—"} 의 위치
+        </p>
+        <p className="mt-1 text-xs text-muted-foreground">
+          기본 OmniHub:{" "}
+          {loc.omnihub ? (
+            <span
+              className={
+                loc.omnihub.status === "online"
+                  ? "text-green-600"
+                  : "text-muted-foreground"
+              }
+            >
+              {loc.omnihub.name ?? loc.omnihub.deviceId} ({loc.omnihub.status})
+            </span>
+          ) : (
+            <span className="text-muted-foreground">매장 설정 따름</span>
+          )}
         </p>
       </div>
 
@@ -158,20 +138,32 @@ export default function LocationDetailPage() {
                   </p>
                   <p className="mt-2 text-xs text-muted-foreground">
                     OmniHub:{" "}
-                    {e.omnihub ? (
-                      <span
-                        className={
-                          e.omnihub.status === "online"
-                            ? "text-green-600"
-                            : "text-muted-foreground"
-                        }
-                      >
-                        {e.omnihub.name ?? e.omnihub.deviceId} (
-                        {e.omnihub.status})
-                      </span>
+                    {e.resolvedOmnihub ? (
+                      <>
+                        <span
+                          className={
+                            e.resolvedOmnihub.status === "online"
+                              ? "text-green-600"
+                              : "text-muted-foreground"
+                          }
+                        >
+                          {e.resolvedOmnihub.name ??
+                            e.resolvedOmnihub.deviceId}{" "}
+                          ({e.resolvedOmnihub.status})
+                        </span>
+                        {e.resolvedOmnihubSource !== "equipment" && (
+                          <span className="ml-1 italic">
+                            (
+                            {e.resolvedOmnihubSource === "location"
+                              ? "위치"
+                              : "매장"}{" "}
+                            상속)
+                          </span>
+                        )}
+                      </>
                     ) : (
-                      <span className="text-muted-foreground">
-                        할당 안 됨
+                      <span className="text-destructive">
+                        할당 안 됨 — 매장 / 위치 / 장비 어디에도 hub 없음
                       </span>
                     )}
                   </p>
@@ -180,6 +172,11 @@ export default function LocationDetailPage() {
                   <Link to={`/equipments/${e.id}`}>
                     <Button variant="outline" size="sm">
                       기능 관리
+                    </Button>
+                  </Link>
+                  <Link to={`/equipments/${e.id}?edit=1`}>
+                    <Button variant="outline" size="sm">
+                      편집
                     </Button>
                   </Link>
                   <Button
@@ -209,6 +206,10 @@ export default function LocationDetailPage() {
         open={openAdd}
         onClose={() => setOpenAdd(false)}
       />
+      <EditLocationModal
+        location={editLocationOpen ? loc : null}
+        onClose={() => setEditLocationOpen(false)}
+      />
     </div>
   );
 }
@@ -233,18 +234,32 @@ function AddEquipmentModal({
   const omnihubs = useOmnihubs();
   const fromPreset = useCreateEquipmentFromPreset();
   const instantiate = useInstantiateTemplate();
+  const [presetType, setPresetType] = useState<string>("");
   const [presetName, setPresetName] = useState<string>("");
   const [templateId, setTemplateId] = useState<string>("");
   const [name, setName] = useState("");
   const [omnihubId, setOmnihubId] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
 
-  // Hubs are still scoped to a store (not a location). Show only hubs of
-  // this store (or unassigned) that aren't already bound to another equipment.
+  // Only show preset types that actually have at least one preset.
+  const presetTypeOptions = useMemo(() => {
+    const seen = new Set<string>();
+    for (const p of presets.data ?? []) seen.add(p.device);
+    return Object.values(EquipmentType).filter((t) => seen.has(t));
+  }, [presets.data]);
+
+  const filteredPresets = useMemo(
+    () => (presets.data ?? []).filter((p) => p.device === presetType),
+    [presets.data, presetType],
+  );
+
+  // Hubs are scoped to a store (not a location). With 1:N hub→equipment
+  // we no longer filter out already-bound hubs — a single hub legitimately
+  // services multiple equipments in the same room.
   const availableHubs = useMemo(
     () =>
       omnihubs.data?.filter(
-        (h) => !h.equipment && (h.storeId === storeId || h.storeId === null),
+        (h) => h.storeId === storeId || h.storeId === null,
       ) ?? [],
     [omnihubs.data, storeId],
   );
@@ -253,6 +268,7 @@ function AddEquipmentModal({
   const selectedPreset = presets.data?.find((p) => p.name === presetName);
 
   function reset() {
+    setPresetType("");
     setPresetName("");
     setTemplateId("");
     setName("");
@@ -340,35 +356,68 @@ function AddEquipmentModal({
         </div>
 
         {mode === "preset" ? (
-          <div className="space-y-2">
-            <Label>프리셋</Label>
-            <Select
-              value={presetName}
-              onChange={(e) => {
-                setPresetName(e.target.value);
-                const p = presets.data?.find((pp) => pp.name === e.target.value);
-                if (p && !name) setName(`${p.brand} ${p.device}`);
-              }}
-              required
-            >
-              <option value="">선택…</option>
-              {presets.data?.map((p) => (
-                <option key={p.name} value={p.name}>
-                  [{TYPE_LABELS[p.device] ?? p.device}] {p.brand} ({p.commandCount}개 명령)
-                </option>
-              ))}
-            </Select>
-            {presets.data && presets.data.length === 0 && (
-              <p className="text-xs text-muted-foreground">
-                사용 가능한 프리셋이 없어요. tools/ir-presets/ 를 확인하세요.
-              </p>
+          <>
+            <div className="space-y-2">
+              <Label>종류</Label>
+              <Select
+                value={presetType}
+                onChange={(e) => {
+                  setPresetType(e.target.value);
+                  setPresetName("");
+                }}
+                required
+              >
+                <option value="">선택…</option>
+                {presetTypeOptions.map((t) => (
+                  <option key={t} value={t}>
+                    {TYPE_LABELS[t] ?? t}
+                  </option>
+                ))}
+              </Select>
+              {presets.data && presets.data.length === 0 && (
+                <p className="text-xs text-muted-foreground">
+                  사용 가능한 프리셋이 없어요. tools/ir-presets/ 를 확인하세요.
+                </p>
+              )}
+            </div>
+
+            {presetType && (
+              <div className="space-y-2">
+                <Label>프리셋</Label>
+                <Select
+                  value={presetName}
+                  onChange={(e) => {
+                    setPresetName(e.target.value);
+                    const p = presets.data?.find(
+                      (pp) => pp.name === e.target.value,
+                    );
+                    if (p && !name) setName(`${p.brand} ${p.device}`);
+                  }}
+                  required
+                >
+                  <option value="">선택…</option>
+                  {filteredPresets.map((p) => (
+                    <option key={p.name} value={p.name}>
+                      {p.brand}
+                      {p.variant ? ` · ${p.variant}` : ""} ({p.commandCount}개
+                      명령)
+                    </option>
+                  ))}
+                </Select>
+                {filteredPresets.length === 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    이 종류로 등록된 프리셋이 없어요.
+                  </p>
+                )}
+                {selectedPreset && (
+                  <p className="text-xs text-muted-foreground">
+                    {selectedPreset.commandCount}개 기능이 자동으로 함께
+                    생성됩니다.
+                  </p>
+                )}
+              </div>
             )}
-            {selectedPreset && (
-              <p className="text-xs text-muted-foreground">
-                {selectedPreset.commandCount}개 기능이 자동으로 함께 생성됩니다.
-              </p>
-            )}
-          </div>
+          </>
         ) : (
           <div className="space-y-2">
             <Label>장비 템플릿</Label>

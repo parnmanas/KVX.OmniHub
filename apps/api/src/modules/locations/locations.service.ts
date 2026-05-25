@@ -18,14 +18,18 @@ export class LocationsService {
     return this.repo.find({
       where: { storeId },
       order: { createdAt: "ASC" },
-      relations: { equipments: true },
+      relations: { equipments: true, omnihub: true },
     });
   }
 
   async get(id: string): Promise<Location> {
     const location = await this.repo.findOne({
       where: { id },
-      relations: { store: true, equipments: { omnihub: true } },
+      relations: {
+        store: true,
+        equipments: { omnihub: true },
+        omnihub: true,
+      },
     });
     if (!location) throw new NotFoundException(`location not found: ${id}`);
     return location;
@@ -37,7 +41,11 @@ export class LocationsService {
       throw new BadRequestException(`store not found: ${storeId}`);
     }
     return this.repo.save(
-      this.repo.create({ storeId, name: dto.name }),
+      this.repo.create({
+        storeId,
+        name: dto.name,
+        omnihubId: dto.omnihubId ?? null,
+      }),
     );
   }
 
@@ -45,6 +53,7 @@ export class LocationsService {
     const location = await this.repo.findOne({ where: { id } });
     if (!location) throw new NotFoundException(`location not found: ${id}`);
     if (dto.name !== undefined) location.name = dto.name;
+    if (dto.omnihubId !== undefined) location.omnihubId = dto.omnihubId;
     return this.repo.save(location);
   }
 

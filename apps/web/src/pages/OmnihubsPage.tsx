@@ -108,7 +108,15 @@ export default function OmnihubsPage() {
                     </Select>
                   </td>
                   <td className="px-4 py-3 text-muted-foreground">
-                    {h.equipment?.name ?? "—"}
+                    {h.equipments && h.equipments.length > 0 ? (
+                      <span title={h.equipments.map((e) => e.name).join(", ")}>
+                        {h.equipments.length === 1
+                          ? h.equipments[0].name
+                          : `${h.equipments[0].name} 외 ${h.equipments.length - 1}개`}
+                      </span>
+                    ) : (
+                      "—"
+                    )}
                   </td>
                   <td className="px-4 py-3 text-right">
                     <div className="flex justify-end gap-2">

@@ -10,12 +10,15 @@ import {
   useDeleteStore,
   useStores,
 } from "@/features/stores/use-stores";
+import type { Store } from "@/features/stores/types";
+import { EditStoreModal } from "@/features/stores/EditStoreModal";
 
 export default function StoresPage() {
   const stores = useStores();
   const createStore = useCreateStore();
   const deleteStore = useDeleteStore();
   const [openCreate, setOpenCreate] = useState(false);
+  const [editStore, setEditStore] = useState<Store | null>(null);
 
   return (
     <div className="space-y-6">
@@ -71,6 +74,13 @@ export default function StoresPage() {
                   </Button>
                 </Link>
                 <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setEditStore(store)}
+                >
+                  편집
+                </Button>
+                <Button
                   variant="destructive"
                   size="sm"
                   onClick={() => {
@@ -95,6 +105,10 @@ export default function StoresPage() {
           setOpenCreate(false);
         }}
         submitting={createStore.isPending}
+      />
+      <EditStoreModal
+        store={editStore}
+        onClose={() => setEditStore(null)}
       />
     </div>
   );
