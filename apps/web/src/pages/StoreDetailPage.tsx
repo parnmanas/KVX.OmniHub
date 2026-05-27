@@ -58,20 +58,27 @@ export default function StoreDetailPage() {
           {store.data.phone ? ` · ${store.data.phone}` : ""}
         </p>
         <p className="mt-1 text-xs text-muted-foreground">
-          기본 OmniHub:{" "}
-          {store.data.omnihub ? (
-            <span
-              className={
-                store.data.omnihub.status === "online"
-                  ? "text-green-600"
-                  : "text-muted-foreground"
-              }
-            >
-              {store.data.omnihub.name ?? store.data.omnihub.deviceId} (
-              {store.data.omnihub.status})
-            </span>
+          이 매장의 OmniHub:{" "}
+          {(store.data.devices ?? []).length === 0 ? (
+            <span>없음 · OmniHubs 메뉴에서 배치하세요</span>
           ) : (
-            <span className="text-muted-foreground">없음</span>
+            <span>
+              {store.data.devices!.map((d, i) => (
+                <span key={d.id}>
+                  {i > 0 && ", "}
+                  <span
+                    className={
+                      d.status === "online"
+                        ? "text-green-600"
+                        : "text-muted-foreground"
+                    }
+                  >
+                    {d.name ?? d.deviceId}
+                    {d.location ? ` · ${d.location.name}` : " · 매장 전체"}
+                  </span>
+                </span>
+              ))}
+            </span>
           )}
         </p>
       </div>

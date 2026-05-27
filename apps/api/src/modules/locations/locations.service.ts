@@ -18,7 +18,14 @@ export class LocationsService {
     return this.repo.find({
       where: { storeId },
       order: { createdAt: "ASC" },
-      relations: { equipments: true, omnihub: true },
+      relations: { equipments: true, devices: true },
+    });
+  }
+
+  listAll(): Promise<Location[]> {
+    return this.repo.find({
+      order: { storeId: "ASC", createdAt: "ASC" },
+      relations: { store: true },
     });
   }
 
@@ -28,7 +35,7 @@ export class LocationsService {
       relations: {
         store: true,
         equipments: { omnihub: true },
-        omnihub: true,
+        devices: true,
       },
     });
     if (!location) throw new NotFoundException(`location not found: ${id}`);
@@ -44,7 +51,6 @@ export class LocationsService {
       this.repo.create({
         storeId,
         name: dto.name,
-        omnihubId: dto.omnihubId ?? null,
       }),
     );
   }
@@ -53,7 +59,6 @@ export class LocationsService {
     const location = await this.repo.findOne({ where: { id } });
     if (!location) throw new NotFoundException(`location not found: ${id}`);
     if (dto.name !== undefined) location.name = dto.name;
-    if (dto.omnihubId !== undefined) location.omnihubId = dto.omnihubId;
     return this.repo.save(location);
   }
 

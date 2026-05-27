@@ -17,12 +17,14 @@ import {
   usePendingPairings,
   type PendingPairing,
 } from "@/features/omnihubs/use-pairing";
+import { useAllLocations } from "@/features/locations/use-locations";
 import { useStores } from "@/features/stores/use-stores";
 import type { Omnihub } from "@/features/omnihubs/types";
 
 export default function OmnihubsPage() {
   const hubs = useOmnihubs();
   const stores = useStores();
+  const locations = useAllLocations();
   const pending = usePendingPairings();
   const deleteHub = useDeleteOmnihub();
   const updateHub = useUpdateOmnihub();
@@ -73,7 +75,7 @@ export default function OmnihubsPage() {
                 <th className="px-4 py-3">상태</th>
                 <th className="px-4 py-3">이름</th>
                 <th className="px-4 py-3">Device ID (MAC)</th>
-                <th className="px-4 py-3">매장</th>
+                <th className="px-4 py-3">위치 (매장 / 위치)</th>
                 <th className="px-4 py-3">장비</th>
                 <th className="px-4 py-3" />
               </tr>
@@ -90,21 +92,55 @@ export default function OmnihubsPage() {
                   </td>
                   <td className="px-4 py-3">
                     <Select
-                      value={h.storeId ?? ""}
-                      onChange={(e) =>
-                        updateHub.mutate({
-                          id: h.id,
-                          input: { storeId: e.target.value || null },
-                        })
+                      value={
+                        h.locationId
+                          ? h.locationId
+                          : h.storeId
+                            ? `store:${h.storeId}`
+                            : ""
                       }
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        if (!v) {
+                          updateHub.mutate({
+                            id: h.id,
+                            input: { locationId: null, storeId: null },
+                          });
+                        } else if (v.startsWith("store:")) {
+                          updateHub.mutate({
+                            id: h.id,
+                            input: {
+                              locationId: null,
+                              storeId: v.slice("store:".length),
+                            },
+                          });
+                        } else {
+                          // location id — server auto-syncs storeId
+                          updateHub.mutate({
+                            id: h.id,
+                            input: { locationId: v },
+                          });
+                        }
+                      }}
                       className="h-8"
                     >
                       <option value="">미할당</option>
-                      {stores.data?.map((s) => (
-                        <option key={s.id} value={s.id}>
-                          {s.name}
-                        </option>
-                      ))}
+                      {stores.data?.map((s) => {
+                        const storeLocs =
+                          locations.data?.filter((l) => l.storeId === s.id) ?? [];
+                        return (
+                          <optgroup key={s.id} label={s.name}>
+                            <option value={`store:${s.id}`}>
+                              {s.name} · 매장 전체 (위치 미지정)
+                            </option>
+                            {storeLocs.map((l) => (
+                              <option key={l.id} value={l.id}>
+                                {s.name} / {l.name}
+                              </option>
+                            ))}
+                          </optgroup>
+                        );
+                      })}
                     </Select>
                   </td>
                   <td className="px-4 py-3 text-muted-foreground">

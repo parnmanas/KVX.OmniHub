@@ -99,19 +99,26 @@ export default function LocationDetailPage() {
           {loc.store?.name ?? "—"} 의 위치
         </p>
         <p className="mt-1 text-xs text-muted-foreground">
-          기본 OmniHub:{" "}
-          {loc.omnihub ? (
-            <span
-              className={
-                loc.omnihub.status === "online"
-                  ? "text-green-600"
-                  : "text-muted-foreground"
-              }
-            >
-              {loc.omnihub.name ?? loc.omnihub.deviceId} ({loc.omnihub.status})
-            </span>
+          이 위치의 OmniHub:{" "}
+          {(loc.devices ?? []).length === 0 ? (
+            <span>없음 · 매장 hub 로 fallback</span>
           ) : (
-            <span className="text-muted-foreground">매장 설정 따름</span>
+            <span>
+              {loc.devices!.map((d, i) => (
+                <span key={d.id}>
+                  {i > 0 && ", "}
+                  <span
+                    className={
+                      d.status === "online"
+                        ? "text-green-600"
+                        : "text-muted-foreground"
+                    }
+                  >
+                    {d.name ?? d.deviceId}
+                  </span>
+                </span>
+              ))}
+            </span>
           )}
         </p>
       </div>

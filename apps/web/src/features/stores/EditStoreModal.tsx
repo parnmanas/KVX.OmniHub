@@ -3,16 +3,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Modal } from "@/components/ui/modal";
-import { Select } from "@/components/ui/select";
-import { useOmnihubs } from "@/features/omnihubs/use-omnihubs";
 import { useUpdateStore } from "./use-stores";
 import type { Store } from "./types";
 
 /**
- * Full-fledged Store edit dialog. Used both from the store-list card and
- * from the store detail page header so editing is consistent. Covers
- * name, address, phone, AND the store's default OmniHub (used when an
- * equipment/location under this store has no hub of its own).
+ * Edit dialog for a store. The OmniHub fallback used to be configured here
+ * via a "default hub" pointer column, but that's been retired in favor of
+ * physical hub placement (Hub.storeId / Hub.locationId on the OmniHubs
+ * page). So this modal is now just name/address/phone.
  */
 export function EditStoreModal({
   store,
@@ -22,11 +20,9 @@ export function EditStoreModal({
   onClose: () => void;
 }) {
   const updateStore = useUpdateStore(store?.id ?? "");
-  const omnihubs = useOmnihubs();
   const [name, setName] = useState("");
   const [address, setAddress] = useState("");
   const [phone, setPhone] = useState("");
-  const [omnihubId, setOmnihubId] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -34,7 +30,6 @@ export function EditStoreModal({
       setName(store.name);
       setAddress(store.address ?? "");
       setPhone(store.phone ?? "");
-      setOmnihubId(store.omnihubId ?? "");
       setError(null);
     }
   }, [store]);
@@ -48,7 +43,6 @@ export function EditStoreModal({
         name: name.trim(),
         address: address.trim() || undefined,
         phone: phone.trim() || undefined,
-        omnihubId: omnihubId === "" ? null : omnihubId,
       });
       onClose();
     } catch (err) {
@@ -62,7 +56,7 @@ export function EditStoreModal({
       open={store !== null}
       onClose={onClose}
       title="매장 편집"
-      description="매장 정보와 매장 기본 OmniHub 를 수정합니다."
+      description="매장 정보를 수정합니다. OmniHub 배치는 OmniHubs 메뉴에서."
     >
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-2">
@@ -81,24 +75,6 @@ export function EditStoreModal({
         <div className="space-y-2">
           <Label>연락처</Label>
           <Input value={phone} onChange={(e) => setPhone(e.target.value)} />
-        </div>
-        <div className="space-y-2">
-          <Label>기본 OmniHub</Label>
-          <Select
-            value={omnihubId}
-            onChange={(e) => setOmnihubId(e.target.value)}
-          >
-            <option value="">— 없음 —</option>
-            {omnihubs.data?.map((h) => (
-              <option key={h.id} value={h.id}>
-                {h.name ?? h.deviceId}
-                {h.status === "online" ? "" : " · 오프라인"}
-              </option>
-            ))}
-          </Select>
-          <p className="text-xs text-muted-foreground">
-            장비/위치에 hub 가 따로 지정되지 않았을 때 이 hub 가 사용돼요.
-          </p>
         </div>
         {error && (
           <p className="text-sm text-destructive" role="alert">

@@ -12,9 +12,20 @@ import type {
 } from "./types";
 
 export const locationsKeys = {
+  all: ["locations", "all"] as const,
   byStore: (storeId: string) => ["locations", "byStore", storeId] as const,
   detail: (id: string) => ["locations", id] as const,
 };
+
+export function useAllLocations() {
+  return useQuery({
+    queryKey: locationsKeys.all,
+    queryFn: async () => {
+      const { data } = await api.get<Location[]>("/locations");
+      return data;
+    },
+  });
+}
 
 export function useLocations(storeId: string | undefined) {
   return useQuery({

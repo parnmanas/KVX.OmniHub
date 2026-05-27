@@ -2,7 +2,6 @@ import {
   Column,
   CreateDateColumn,
   Entity,
-  JoinColumn,
   ManyToOne,
   OneToMany,
   PrimaryGeneratedColumn,
@@ -26,18 +25,11 @@ export class Location {
   @Column()
   name!: string;
 
-  // Default hub for this location — used when an equipment in this
-  // location has no hub assigned. Overrides the store-level default.
-  // Resolution order: Equipment → Location → Store.
-  @ManyToOne(() => OmniHubDevice, {
-    nullable: true,
-    onDelete: "SET NULL",
-  })
-  @JoinColumn()
-  omnihub!: OmniHubDevice | null;
-
-  @Column({ type: "uuid", nullable: true })
-  omnihubId!: string | null;
+  // Hubs physically placed at this location (Hub.locationId → here).
+  // Fallback resolution treats any of these as a candidate for equipments
+  // under this location that don't pin their own hub.
+  @OneToMany(() => OmniHubDevice, (d) => d.location)
+  devices!: OmniHubDevice[];
 
   @OneToMany(() => Equipment, (e) => e.location)
   equipments!: Equipment[];

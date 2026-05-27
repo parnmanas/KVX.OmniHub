@@ -76,14 +76,11 @@ export class EquipmentsService {
 
   // ---------- equipments ----------
 
-  // We always load Equipment.omnihub + Location.omnihub + Store.omnihub so
-  // the response can carry a `resolvedOmnihub` field that mirrors what
-  // requireOmnihubForFunction() will actually dispatch with. The UI uses
-  // this to decide whether to enable the play button — equipment-level
-  // omnihubId alone isn't enough (the hub could be inherited from the
-  // location or the store).
+  // Load enough to compute resolvedOmnihub server-side. The fallback chain
+  // reads physical placement (Hub.locationId / Hub.storeId), not operational
+  // pointer fields on Store/Location — those columns are gone.
   private static readonly FULL_RELATIONS = {
-    location: { store: { omnihub: true }, omnihub: true },
+    location: { store: { devices: true }, devices: true },
     omnihub: true,
     functions: true,
   };
@@ -126,8 +123,19 @@ export class EquipmentsService {
   // UI can render unified controls regardless of underlying protocol.
   private withResolvedOmnihub(eq: Equipment): Equipment {
     const direct = eq.omnihub ?? null;
-    const fromLocation = eq.location?.omnihub ?? null;
-    const fromStore = eq.location?.store?.omnihub ?? null;
+    // Hub physically at this location (most specific implicit match).
+    // location.devices is loaded by FULL_RELATIONS. We pick the
+    // earliest-created hub to make resolution deterministic.
+    const locationHubs = (eq.location?.devices ?? [])
+      .slice()
+      .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+    const fromLocation = locationHubs[0] ?? null;
+    // Hub at the store but not pinned to any location — "store-wide" hub.
+    const storeHubs = (eq.location?.store?.devices ?? [])
+      .filter((h) => h.locationId === null)
+      .slice()
+      .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+    const fromStore = storeHubs[0] ?? null;
     const resolved = direct ?? fromLocation ?? fromStore;
     const source = direct
       ? "equipment"
@@ -682,16 +690,30 @@ export class EquipmentsService {
   ): Promise<string> {
     const eq = await this.equipments.findOne({
       where: { id: fn.equipmentId },
-      relations: { location: { store: true } },
+      relations: { location: true },
     });
     if (!eq) {
       throw new NotFoundException(`equipment not found: ${fn.equipmentId}`);
     }
     if (eq.omnihubId) return eq.omnihubId;
-    if (eq.location?.omnihubId) return eq.location.omnihubId;
-    if (eq.location?.store?.omnihubId) return eq.location.store.omnihubId;
+    // Same-location hub (most specific)
+    const locHub = await this.devices.findOne({
+      where: { locationId: eq.locationId },
+      order: { createdAt: "ASC" },
+    });
+    if (locHub) return locHub.id;
+    // Store-wide hub (locationId NULL, same storeId)
+    if (eq.location?.storeId) {
+      const storeHub = await this.devices
+        .createQueryBuilder("h")
+        .where("h.storeId = :sid", { sid: eq.location.storeId })
+        .andWhere("h.locationId IS NULL")
+        .orderBy("h.createdAt", "ASC")
+        .getOne();
+      if (storeHub) return storeHub.id;
+    }
     throw new BadRequestException(
-      "no OmniHub assigned for this equipment, its location, or its store",
+      "no OmniHub reachable for this equipment — place a hub at the location or in the store",
     );
   }
 

@@ -15,26 +15,26 @@ export class StoresService {
   list(): Promise<Store[]> {
     return this.repo.find({
       order: { createdAt: "ASC" },
-      relations: { omnihub: true },
     });
   }
 
   async get(id: string): Promise<Store> {
     const store = await this.repo.findOne({
       where: { id },
-      relations: { devices: true, locations: true, omnihub: true },
+      relations: { devices: { location: true }, locations: true },
     });
     if (!store) throw new NotFoundException(`store not found: ${id}`);
     return store;
   }
 
   create(dto: CreateStoreDto): Promise<Store> {
-    return this.repo.save(this.repo.create({
-      name: dto.name,
-      address: dto.address ?? null,
-      phone: dto.phone ?? null,
-      omnihubId: dto.omnihubId ?? null,
-    }));
+    return this.repo.save(
+      this.repo.create({
+        name: dto.name,
+        address: dto.address ?? null,
+        phone: dto.phone ?? null,
+      }),
+    );
   }
 
   async update(id: string, dto: UpdateStoreDto): Promise<Store> {
@@ -43,7 +43,6 @@ export class StoresService {
     if (dto.name !== undefined) store.name = dto.name;
     if (dto.address !== undefined) store.address = dto.address ?? null;
     if (dto.phone !== undefined) store.phone = dto.phone ?? null;
-    if (dto.omnihubId !== undefined) store.omnihubId = dto.omnihubId;
     return this.repo.save(store);
   }
 

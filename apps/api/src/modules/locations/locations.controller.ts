@@ -21,6 +21,11 @@ import { LocationsService } from "./locations.service";
 export class LocationsController {
   constructor(private readonly service: LocationsService) {}
 
+  @Get("locations")
+  listAll(): Promise<Location[]> {
+    return this.service.listAll();
+  }
+
   @Get("stores/:storeId/locations")
   listForStore(
     @Param("storeId", ParseUUIDPipe) storeId: string,

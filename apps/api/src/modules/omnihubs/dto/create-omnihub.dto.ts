@@ -15,4 +15,10 @@ export class CreateOmnihubDto {
   @IsOptional()
   @IsUUID()
   storeId?: string;
+
+  // Pinning a location auto-derives storeId (hub physically lives at the
+  // location's store). Leave undefined for "store-only" placement.
+  @IsOptional()
+  @IsUUID()
+  locationId?: string;
 }

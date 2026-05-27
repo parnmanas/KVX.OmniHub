@@ -11,4 +11,11 @@ export class UpdateOmnihubDto {
   @IsOptional()
   @IsUUID()
   storeId?: string | null;
+
+  // Setting locationId auto-syncs storeId from the location's store.
+  // null clears placement to "store only".
+  @ValidateIf((_, v) => v !== null)
+  @IsOptional()
+  @IsUUID()
+  locationId?: string | null;
 }
