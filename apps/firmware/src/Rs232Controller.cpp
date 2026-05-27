@@ -56,6 +56,14 @@ void begin() {
   g_began = false;
 }
 
+// Upper bound on how long we'll block the WS loop reading a single response.
+// The hub processes server messages in a single task; a long blocking read
+// here means missed pings and risk of a ws disconnect. 500ms is well above
+// any sane projector ack latency.
+static constexpr uint32_t kMaxResponseTimeoutMs = 500;
+// Hex-encoded response cap. 64 bytes raw == 128 chars hex.
+static constexpr size_t kMaxResponseHexChars = 128;
+
 bool send(const JsonVariantConst& payload, String* responseOut) {
   uint32_t baud = payload["baud"] | 9600;
   uint8_t dataBits = payload["dataBits"] | 8;
@@ -63,6 +71,13 @@ bool send(const JsonVariantConst& payload, String* responseOut) {
   uint8_t stopBits = payload["stopBits"] | 1;
   JsonArrayConst bytes = payload["bytes"].as<JsonArrayConst>();
   uint32_t responseTimeoutMs = payload["responseTimeoutMs"] | 0;
+  // Clamp so a buggy preset can't stall the ws loop into a ping timeout.
+  if (responseTimeoutMs > kMaxResponseTimeoutMs) {
+    Serial.printf("[rs232] clamp responseTimeoutMs %u -> %u\n",
+                  (unsigned)responseTimeoutMs,
+                  (unsigned)kMaxResponseTimeoutMs);
+    responseTimeoutMs = kMaxResponseTimeoutMs;
+  }
 
   // Range checks before we touch the UART. Bad params from a buggy preset
   // shouldn't be able to reconfigure the serial peripheral.
@@ -114,6 +129,13 @@ bool send(const JsonVariantConst& payload, String* responseOut) {
     delay(20);
   }
 
+  // Drain any stale RX bytes left over from a previous projector reply or
+  // line noise. Without this, the response from the PREVIOUS command can
+  // bleed into the reply we're about to read here.
+  while (g_serial.available()) {
+    (void)g_serial.read();
+  }
+
   Serial.printf("[rs232] send %u bytes @ %u %ud%s%u\n", (unsigned)n,
                 (unsigned)baud, (unsigned)dataBits, parity,
                 (unsigned)stopBits);
@@ -126,12 +148,22 @@ bool send(const JsonVariantConst& payload, String* responseOut) {
   }
 
   // Optional read-back. Most projectors echo a few ack bytes within a few
-  // hundred ms; we collect up to 64 bytes and hand them back as hex pairs.
+  // hundred ms; we collect up to kMaxResponseHexChars/2 bytes and hand
+  // them back as hex pairs.
   if (responseOut && responseTimeoutMs > 0) {
-    uint32_t deadline = millis() + responseTimeoutMs;
-    responseOut->reserve(128);
-    while (millis() < deadline && responseOut->length() < 64 * 2) {
-      while (g_serial.available()) {
+    // Wraparound-safe deadline: compare (now - start) to the duration
+    // instead of comparing two absolute uint32_t timestamps, which would
+    // misbehave around the 49.7-day millis() rollover.
+    const uint32_t start = millis();
+    responseOut->reserve(kMaxResponseHexChars);
+    while ((uint32_t)(millis() - start) < responseTimeoutMs &&
+           responseOut->length() < kMaxResponseHexChars) {
+      // Inner loop must also respect the cap — `available()` can return
+      // a large count if the projector dumped many bytes in one burst, and
+      // without the guard we'd happily overshoot kMaxResponseHexChars by
+      // however many bytes were sitting in the UART FIFO.
+      while (g_serial.available() &&
+             responseOut->length() < kMaxResponseHexChars) {
         uint8_t b = g_serial.read();
         char hex[3];
         snprintf(hex, sizeof(hex), "%02X", b);
